@@ -16,13 +16,14 @@ class Dataset(object):
             images = images.reshape(images.shape[0],
                                     images.shape[1]*images.shape[2]*images.shape[3])
 
-#        images=images.astype(np.float32)
-#        images=np.multiply(images,1.0/255.0)
+        images=images.astype(np.float32)
+        images=np.multiply(images,1.0/255.0)
 
         self._images=images
         self._labels=labels
         self._epochs_completed = 0
         self._index_in_epoch = 0
+        self._first=True
 
     @property
     def images(self):
@@ -48,7 +49,8 @@ class Dataset(object):
         '''
         start = self._index_in_epoch
         self._index_in_epoch += batch_size
-        if self._index_in_epoch > self._num_examples:#如果大于一次循环，重新shuffle一次
+        if self._index_in_epoch > self._num_examples or self._first:#如果大于一次循环，重新shuffle一次
+            self._first=False
             perm = np.arange(self._num_examples)
             np.random.shuffle(perm)
             self._images = self._images[perm]

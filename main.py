@@ -3,6 +3,7 @@ import time
 import tensorflow as tf
 import network
 import dataset
+import numpy as np
 
 
 def fill_feed_dict(data_sets, images_placeholder, labels_placeholder, fake=False):
@@ -41,7 +42,7 @@ def main():
 
         sess.run(tf.global_variables_initializer())
 
-        for step in xrange(100000):
+        for step in xrange(100001):
             start_time = time.time()
             feed_dict,label = fill_feed_dict(data_sets, images_placeholder, labels_placeholder)
             _, loss_value, output = sess.run([train_op, loss, logits], feed_dict=feed_dict)
@@ -50,10 +51,27 @@ def main():
 
             if step % 1000 == 0:
                 print ('Step:%d: loss = %.2f (%.3f sec)' % (step, loss_value, duration))
-                print ('Output:%f  Label:%f' % (output[0],label[0]))#没做准确率计算，姑且先显示当前这次的网络输出和label
-
+#                print ('Output:%f  Label:%f' % (output[0],label[0]))#没做准确率计算，姑且先显示当前这次的网络输出和label
+                print label
+                print np.array(output).reshape([1])
+            if step % 10000 == 0:
+                feed_dict = {
+                    images_placeholder: data_sets.images[0:512],
+                    labels_placeholder: data_sets.labels[0:512],
+                }
+                output = sess.run(logits, feed_dict=feed_dict)
+                output = np.array(output).reshape(512)
+                label = np.array(data_sets.labels)
+                correct = 0
+                for i in xrange(512):
+                    if abs(output[i] - label[i]) < 0.07:
+                        correct += 1
+                print correct
+                print float(correct) / 512
 
 
 if __name__ == '__main__':
     main()
+
+
 
