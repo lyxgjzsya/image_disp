@@ -42,7 +42,7 @@ def main():
 
         sess.run(tf.global_variables_initializer())
 
-        for step in xrange(100001):
+        for step in xrange(10001):
             start_time = time.time()
             feed_dict,label = fill_feed_dict(data_sets, images_placeholder, labels_placeholder)
             _, loss_value, output = sess.run([train_op, loss, logits], feed_dict=feed_dict)
