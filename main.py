@@ -14,7 +14,7 @@ def fill_feed_dict(data_sets, images_placeholder, labels_placeholder, fake=False
         images = [images_tmp]
         labels = [1]
     else:
-        images, labels = data_sets.next_batch(1)#batch 目前设置大于1了就有bug，还没修复
+        images, labels = data_sets.next_batch(5)#batch 目前设置大于1了就有bug，还没修复
     feed_dict = {
         images_placeholder: images,
         labels_placeholder: labels,
@@ -42,7 +42,7 @@ def main():
 
         sess.run(tf.global_variables_initializer())
 
-        for step in xrange(10001):
+        for step in xrange(1000001):
             start_time = time.time()
             feed_dict,label = fill_feed_dict(data_sets, images_placeholder, labels_placeholder)
             _, loss_value, output = sess.run([train_op, loss, logits], feed_dict=feed_dict)
@@ -53,7 +53,7 @@ def main():
                 print ('Step:%d: loss = %.2f (%.3f sec)' % (step, loss_value, duration))
 #                print ('Output:%f  Label:%f' % (output[0],label[0]))#没做准确率计算，姑且先显示当前这次的网络输出和label
                 print label
-                print np.array(output).reshape([1])
+                print np.array(output).reshape([5])
             if step % 10000 == 0:
                 feed_dict = {
                     images_placeholder: data_sets.images[0:512],
