@@ -4,13 +4,13 @@ import tensorflow as tf
 import network
 import dataset
 import numpy as np
-
+EPIWidth = 32
 
 def fill_feed_dict(data_sets, images_placeholder, labels_placeholder, fake=False):
     images = None
     labels = None
     if fake:
-        images_tmp = [1] * 9 * 16 * 3
+        images_tmp = [1] * 9 * EPIWidth * 3
         images = [images_tmp]
         labels = [1]
     else:
@@ -27,7 +27,7 @@ def main():
     with tf.Graph().as_default():
         global_step = tf.Variable(0, trainable=False)
 
-        images_placeholder = tf.placeholder(tf.float32, shape=(None, 9 * 16 * 3))
+        images_placeholder = tf.placeholder(tf.float32, shape=(None, 9 * EPIWidth * 3))
         labels_placeholder = tf.placeholder(tf.float32, shape=(None))
 
         logits = network.inference(images_placeholder)
@@ -42,8 +42,9 @@ def main():
 
         sess.run(tf.global_variables_initializer())
 
+        start_time = time.time()
         for step in xrange(1000001):
-            start_time = time.time()
+
             feed_dict,label = fill_feed_dict(data_sets, images_placeholder, labels_placeholder)
             _, loss_value, output = sess.run([train_op, loss, logits], feed_dict=feed_dict)
 

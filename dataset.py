@@ -3,7 +3,7 @@ import numpy as np
 import os
 from PIL import Image
 
-EPIWidth = 16 #还没有关联到network的构建，所以不要直接在这里改EPIwidth
+EPIWidth = 32 #还没有关联到network的构建，所以不要直接在这里改EPIwidth
 
 class Dataset(object):
 
@@ -71,10 +71,10 @@ def EPIextractor(image):
     '''
     height = image.shape[0]
     width = image.shape[1]
-    paddinghead = image[:,range(8,0,-1),:]#左右颠倒
-    paddinghead = paddinghead[range(8,-1,-1),:,:] #上下颠倒
+    paddinghead = image[:,range(EPIWidth/2,0,-1),:]#左右颠倒
+    paddinghead = paddinghead[range(9-1,-1,-1),:,:] #上下颠倒
     paddingtail = image[:,range(width-2,width-2-EPIWidth/2,-1),:]
-    paddingtail = paddingtail[range(8,-1,-1),:,:]
+    paddingtail = paddingtail[range(9-1,-1,-1),:,:]
     #在原图最左与最右 添加翻转过的内容作为边界填充 假设取9*16*3卷积 原图就变成9*(16/2+512+16/2)*3
     image = np.column_stack((paddinghead,image,paddingtail))
     subEPI = [image[:,i-EPIWidth/2:i+EPIWidth/2,:] for i in range(EPIWidth/2,width+EPIWidth/2)]
