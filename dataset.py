@@ -16,14 +16,17 @@ class Dataset(object):
             images = images.reshape(images.shape[0],
                                     images.shape[1]*images.shape[2]*images.shape[3])
 
-#        images=images.astype(np.float32)
-#        images=np.multiply(images,1.0/255.0)
+        images=images.astype(np.float32)
+        images=np.multiply(images,1.0/255.0)
 
         self._images=images
         self._labels=labels
         self._epochs_completed = 0
         self._index_in_epoch = 0
         self._first=True
+        print images.shape
+        print labels.shape
+
 
     @property
     def images(self):
@@ -81,11 +84,12 @@ def EPIextractor(image):
 
     return subEPI
 
-def read_disp(dir):
+def read_disp(dir,softmax=False):
     '''
     read disp.txt
     :param dir: the path to disp.txt
     :return: np.array[512*512] image.shape[0]*image.shape[1]
+            if hot == True return hot table for classify
     '''
     disp_list = []  # 512*512
     with open(dir, 'r') as f:
@@ -96,6 +100,11 @@ def read_disp(dir):
             disp_list.append(data)
     disp = np.array(disp_list)
     disp = disp.reshape(disp.shape[0] * disp.shape[1])
+    if softmax:
+        for i in xrange(disp.shape[0]):
+            disp[i] = int((disp[i]+2)/0.5)
+
+
     return disp
 
 def read_data(dir):
@@ -125,7 +134,7 @@ def read_data(dir):
 
 
 def get_datasets(dir):
-    new_disp = read_disp(dir+'/disp.txt')
+    new_disp = read_disp(dir+'/disp.txt',softmax=True)
     new_data = read_data(dir+'/pngdata/epi36_44')
 
     return Dataset(new_data,new_disp)
