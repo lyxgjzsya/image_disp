@@ -5,32 +5,39 @@ import network
 import dataset
 import numpy as np
 EPIWidth = 32
+batch_size = 50
+box_path = '/home/luoyaox/Work/box'
+disp_precision = 0.1
 
-def fill_feed_dict(data_sets, images_placeholder, labels_placeholder, fake=False):
-    images = None
-    labels = None
-    if fake:
-        images_tmp = [1] * 9 * EPIWidth * 3
-        images = [images_tmp]
-        labels = [1]
-    else:
-        images, labels = data_sets.next_batch(50)
+def do_eval(sess,eval_correct,images_placeholder,labels_placeholder,data_set):
+    true_count = 0
+    steps_per_epoch = data_set.num_examples // batch_size
+    num_example = steps_per_epoch * batch_size
+    for step in xrange(steps_per_epoch):
+        feed_dict = fill_feed_dict(data_set,images_placeholder,labels_placeholder)
+        true_count += sess.run(eval_correct,feed_dict=feed_dict)
+    precision = float(true_count)/num_example
+    print ('example: %d, correct: %d, Precision: %0.04f' % (num_example,true_count,precision))
+
+
+def fill_feed_dict(data_sets, images_placeholder, labels_placeholder):
+    images, labels = data_sets.next_batch(batch_size)
     feed_dict = {
         images_placeholder: images,
         labels_placeholder: labels,
     }
-    return feed_dict,labels
+    return feed_dict
 
 
 def main():
-    data_sets = dataset.get_datasets('/home/luoyaox/Work/box')
+    data_sets = dataset.get_datasets(box_path,EPIWidth,disp_precision)
     with tf.Graph().as_default():
         global_step = tf.Variable(0, trainable=False)
 
         images_placeholder = tf.placeholder(tf.float32, shape=(None, 9 * EPIWidth * 3))
         labels_placeholder = tf.placeholder(tf.int32, shape=(None))
 
-        logits = network.inference_old(images_placeholder)
+        logits = network.inference(images_placeholder,EPIWidth,disp_precision)
 
         loss = network.loss(logits, labels_placeholder)
 
@@ -44,46 +51,25 @@ def main():
 
         start_time = time.time()
 
-        for step in xrange(100001):
+        for step in xrange(1000001):
 
-            feed_dict,labels = fill_feed_dict(data_sets, images_placeholder, labels_placeholder)
+            feed_dict = fill_feed_dict(data_sets, images_placeholder, labels_placeholder)
             _, loss_value,output = sess.run([train_op, loss, logits], feed_dict=feed_dict)
 
             duration = time.time() - start_time
 
-            if step % 100 == 0:
-                print ('Step:%d: loss = %.2f (%.3f sec)' % (step, loss_value, duration))
-#                print ('Output:%f  Label:%f' % (output[0],label[0]))#没做准确率计算，姑且先显示当前这次的网络输出和label
-            #    print output[0:2]
-            #    print feed_dict[labels_placeholder][0:2]
             if step % 1000 == 0:
-                feed_dict = {
-                    images_placeholder: data_sets.images,
-                    labels_placeholder: data_sets.labels,
-                }
-                _,output = sess.run([loss,logits],feed_dict=feed_dict)
-                true_count=0
-                for i in xrange(262144):
-                    max = -100
-                    no = 0
-                    for j in xrange(41):
-                        if output[i][j]>max:
-                            max=output[i][j]
-                            no=j
-                    if no==data_sets.labels[i]:
-                        true_count+=1
-                print float(true_count)/262144.0
+                print ('Step:%d: loss = %.2f (%.3f sec)' % (step, loss_value, duration))
 
-
-
-
-
-
+            if step % 10000 == 0:
+                print('Training Data Eval:')
+                do_eval(sess,eval_correct,images_placeholder,labels_placeholder,data_sets)
 
 
 
 if __name__ == '__main__':
     main()
+
 
 
 

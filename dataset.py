@@ -3,8 +3,6 @@ import numpy as np
 import os
 from PIL import Image
 
-EPIWidth = 32 #还没有关联到network的构建，所以不要直接在这里改EPIwidth
-
 class Dataset(object):
 
     def __init__(self,images,labels,reshape=True):
@@ -24,8 +22,8 @@ class Dataset(object):
         self._epochs_completed = 0
         self._index_in_epoch = 0
         self._first=True
-        print images.shape
-        print labels.shape
+        print "data_shape:",images.shape
+        print "label_shape:",labels.shape
 
 
     @property
@@ -66,7 +64,7 @@ class Dataset(object):
         return self._images[start:end], self._labels[start:end]
 
 
-def EPIextractor(image):
+def EPIextractor(image,EPIWidth):
     '''
     turn big EPI to small EPI
     :param image:np.array[9,512,3] EPI
@@ -84,7 +82,7 @@ def EPIextractor(image):
 
     return subEPI
 
-def read_disp(dir,softmax=False):
+def read_disp(dir,disp_precision,softmax=False):
     '''
     read disp.txt
     :param dir: the path to disp.txt
@@ -102,12 +100,12 @@ def read_disp(dir,softmax=False):
     disp = disp.reshape(disp.shape[0] * disp.shape[1])
     if softmax:
         for i in xrange(disp.shape[0]):
-            disp[i] = int((disp[i]+2)/0.1)
+            disp[i] = int((disp[i]+2)/disp_precision)
 
 
     return disp
 
-def read_data(dir):
+def read_data(dir,EPIWidth):
     '''
     read EPI and turn it to small EPI
     :param dir:
@@ -125,7 +123,7 @@ def read_data(dir):
     for png_path in files:
         with open(png_path) as f:
             im = Image.open(f)
-            subEPI = EPIextractor(np.array(im))
+            subEPI = EPIextractor(np.array(im),EPIWidth)
             datalist.append(subEPI)
     datas = np.array(datalist)
     datas = datas.reshape([datas.shape[0]*datas.shape[1],datas.shape[2],datas.shape[3],datas.shape[4]])
@@ -133,8 +131,8 @@ def read_data(dir):
     return datas
 
 
-def get_datasets(dir):
-    new_disp = read_disp(dir+'/disp.txt',softmax=True)
-    new_data = read_data(dir+'/pngdata/epi36_44')
+def get_datasets(dir,EPIWidth,disp_precision):
+    new_disp = read_disp(dir+'/disp.txt',disp_precision,softmax=True)
+    new_data = read_data(dir+'/epi36_44',EPIWidth)
 
     return Dataset(new_data,new_disp)
