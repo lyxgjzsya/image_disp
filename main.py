@@ -5,16 +5,15 @@ import network
 import dataset
 import numpy as np
 EPIWidth = 32
+batch_size = 50
 
-def fill_feed_dict(data_sets, images_placeholder, labels_placeholder, fake=False):
-    images = None
-    labels = None
-    if fake:
-        images_tmp = [1] * 9 * EPIWidth * 3
-        images = [images_tmp]
-        labels = [1]
-    else:
-        images, labels = data_sets.next_batch(50)
+def do_eval(sess,eval_correct,images_placeholder,labels_placeholder,data_set):
+    true_count = 0
+    steps_per_epoch = data_set.num_example // batch_size
+
+
+def fill_feed_dict(data_sets, images_placeholder, labels_placeholder):
+    images, labels = data_sets.next_batch(batch_size)
     feed_dict = {
         images_placeholder: images,
         labels_placeholder: labels,
@@ -30,7 +29,7 @@ def main():
         images_placeholder = tf.placeholder(tf.float32, shape=(None, 9 * EPIWidth * 3))
         labels_placeholder = tf.placeholder(tf.int32, shape=(None))
 
-        logits = network.inference_old(images_placeholder)
+        logits = network.inference(images_placeholder,EPIWidth)
 
         loss = network.loss(logits, labels_placeholder)
 
@@ -44,26 +43,26 @@ def main():
 
         start_time = time.time()
 
-        for step in xrange(100001):
+        for step in xrange(1000001):
 
             feed_dict,labels = fill_feed_dict(data_sets, images_placeholder, labels_placeholder)
             _, loss_value,output = sess.run([train_op, loss, logits], feed_dict=feed_dict)
 
             duration = time.time() - start_time
 
-            if step % 100 == 0:
+            if step % 1000 == 0:
                 print ('Step:%d: loss = %.2f (%.3f sec)' % (step, loss_value, duration))
 #                print ('Output:%f  Label:%f' % (output[0],label[0]))#没做准确率计算，姑且先显示当前这次的网络输出和label
-            #    print output[0:2]
-            #    print feed_dict[labels_placeholder][0:2]
-            if step % 1000 == 0:
+             #   print output[0:2]
+             #   print feed_dict[labels_placeholder][0:2]
+            if step % 10000 == 0:
                 feed_dict = {
-                    images_placeholder: data_sets.images,
-                    labels_placeholder: data_sets.labels,
+                    images_placeholder: data_sets.images[0:512],
+                    labels_placeholder: data_sets.labels[0:512],
                 }
                 _,output = sess.run([loss,logits],feed_dict=feed_dict)
                 true_count=0
-                for i in xrange(262144):
+                for i in xrange(512):
                     max = -100
                     no = 0
                     for j in xrange(41):
@@ -72,13 +71,7 @@ def main():
                             no=j
                     if no==data_sets.labels[i]:
                         true_count+=1
-                print float(true_count)/262144.0
-
-
-
-
-
-
+                print float(true_count)/512.0
 
 
 

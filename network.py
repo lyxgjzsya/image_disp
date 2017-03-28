@@ -4,26 +4,29 @@ import math
 EPIWidth = 32
 
 #测试用小型网络
-def inference_old(image_pl):
+def inference_old(image_pl,EPIWidth):
     image_placeholder = tf.reshape(image_pl,[-1,9,EPIWidth,3])
-    w_conv1 = tf.Variable(tf.truncated_normal([2, 2, 3, 32], stddev=0))
+    w_conv1 = tf.Variable(tf.truncated_normal([2, 2, 3, 32], stddev=1e-4))
     conv1 = tf.nn.conv2d(image_placeholder, w_conv1, [1, 1, 1, 1], padding='VALID')
-    b_conv1 = tf.Variable(tf.constant(0.0, shape=[32]))
+    b_conv1 = tf.Variable(tf.constant(1e-2, shape=[32]))
     a_conv1 = tf.nn.relu(tf.nn.bias_add(conv1,b_conv1))
     pool1 = tf.nn.max_pool(a_conv1, ksize=[1, 1, 2, 1], strides=[1, 1, 2, 1], padding='VALID')
 
-    w_conv2 = tf.Variable(tf.truncated_normal([2, 2, 32, 64], stddev=0))
+    w_conv2 = tf.Variable(tf.truncated_normal([2, 2, 32, 64], stddev=1e-4))
     conv2 = tf.nn.conv2d(pool1, w_conv2, [1, 1, 1, 1], padding='VALID')
-    b_conv2 = tf.Variable(tf.constant(0.0, shape=[64]))
+    b_conv2 = tf.Variable(tf.constant(1e-2, shape=[64]))
     a_conv2 = tf.nn.relu(tf.nn.bias_add(conv2,b_conv2))
     pool2 = tf.nn.max_pool(a_conv2, ksize=[1, 1, 2, 1], strides=[1, 1, 2, 1], padding='VALID')
 
-    w_fc1 = tf.Variable(tf.truncated_normal([7 * 7 * 64, 256], stddev=1/3136))
-    b_fc1 = tf.Variable(tf.constant(0.0, shape=[256]))
-    pool2_tmp = tf.reshape(pool2, [-1, 7 * 7 * 64])
+    pool2_shape = pool2.get_shape()
+    fc1_input_size = int(pool2_shape[1] * pool2_shape[2] * pool2_shape[3])
+
+    w_fc1 = tf.Variable(tf.truncated_normal([fc1_input_size, 256], stddev=1.0/fc1_input_size))
+    b_fc1 = tf.Variable(tf.constant(1e-2, shape=[256]))
+    pool2_tmp = tf.reshape(pool2, [-1, fc1_input_size])
     a_fc1 = tf.nn.relu(tf.matmul(pool2_tmp, w_fc1) + b_fc1)
 
-    w_fc2 = tf.Variable(tf.truncated_normal([256,41], stddev=1/256))
+    w_fc2 = tf.Variable(tf.truncated_normal([256,41], stddev=1.0/256))
     b_fc2 = tf.Variable(tf.constant(0.0, shape=[41]))
 #    a_fc2 = tf.nn.softmax(tf.matmul(a_fc1,w_fc2) + b_fc2)
     a_fc2 = tf.matmul(a_fc1,w_fc2)+b_fc2
@@ -39,11 +42,11 @@ def inference_old(image_pl):
 
     return a_fc2
 
-def inference(images):
+def inference(images,EPIWidth):
     with tf.name_scope('hidden1'):
         weights = tf.Variable(
-            tf.truncated_normal([9*32*3, 512],
-                                stddev=1.0 / math.sqrt(float(9*32*3))),
+            tf.truncated_normal([9*EPIWidth*3, 512],
+                                stddev=1.0 / math.sqrt(float(9*EPIWidth*3))),
             name='weights')
         biases = tf.Variable(tf.zeros([512]),
                              name='biases')

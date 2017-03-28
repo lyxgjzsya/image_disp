@@ -24,8 +24,8 @@ class Dataset(object):
         self._epochs_completed = 0
         self._index_in_epoch = 0
         self._first=True
-        print images.shape
-        print labels.shape
+        print "data_shape:",images.shape
+        print "label_shape:",labels.shape
 
 
     @property
@@ -135,6 +135,6 @@ def read_data(dir):
 
 def get_datasets(dir):
     new_disp = read_disp(dir+'/disp.txt',softmax=True)
-    new_data = read_data(dir+'/pngdata/epi36_44')
+    new_data = read_data(dir+'/epi36_44')
 
     return Dataset(new_data,new_disp)
