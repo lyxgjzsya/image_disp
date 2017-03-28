@@ -30,11 +30,11 @@ def main():
         images_placeholder = tf.placeholder(tf.float32, shape=(None, 9 * EPIWidth * 3))
         labels_placeholder = tf.placeholder(tf.int32, shape=(None))
 
-        logits = network.inference(images_placeholder)
+        logits = network.inference_old(images_placeholder)
 
         loss = network.loss(logits, labels_placeholder)
 
-        train_op = network.training(loss, 0.1, global_step)
+        train_op = network.training(loss, 1e-4, global_step)
 
         eval_correct = network.evaluation(logits,labels_placeholder)
 
@@ -51,12 +51,12 @@ def main():
 
             duration = time.time() - start_time
 
-            if step % 1000 == 0:
+            if step % 100 == 0:
                 print ('Step:%d: loss = %.2f (%.3f sec)' % (step, loss_value, duration))
 #                print ('Output:%f  Label:%f' % (output[0],label[0]))#没做准确率计算，姑且先显示当前这次的网络输出和label
-                print output[0:2]
-                print feed_dict[labels_placeholder][0:2]
-            if step % 10000 == 0:
+            #    print output[0:2]
+            #    print feed_dict[labels_placeholder][0:2]
+            if step % 1000 == 0:
                 feed_dict = {
                     images_placeholder: data_sets.images,
                     labels_placeholder: data_sets.labels,
@@ -66,7 +66,7 @@ def main():
                 for i in xrange(262144):
                     max = -100
                     no = 0
-                    for j in xrange(9):
+                    for j in xrange(41):
                         if output[i][j]>max:
                             max=output[i][j]
                             no=j

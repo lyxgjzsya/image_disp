@@ -102,7 +102,7 @@ def read_disp(dir,softmax=False):
     disp = disp.reshape(disp.shape[0] * disp.shape[1])
     if softmax:
         for i in xrange(disp.shape[0]):
-            disp[i] = int((disp[i]+2)/0.5)
+            disp[i] = int((disp[i]+2)/0.1)
 
 
     return disp
