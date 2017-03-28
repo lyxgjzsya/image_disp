@@ -1,10 +1,11 @@
 # -*- coding: UTF-8 -*-
 import tensorflow as tf
 import math
-EPIWidth = 32
 
 #测试用小型网络
-def inference_old(image_pl,EPIWidth):
+def inference_old(image_pl,EPIWidth,disp_precision):
+    output_size = int(4 / disp_precision) + 1
+
     image_placeholder = tf.reshape(image_pl,[-1,9,EPIWidth,3])
     w_conv1 = tf.Variable(tf.truncated_normal([2, 2, 3, 32], stddev=1e-4))
     conv1 = tf.nn.conv2d(image_placeholder, w_conv1, [1, 1, 1, 1], padding='VALID')
@@ -26,8 +27,8 @@ def inference_old(image_pl,EPIWidth):
     pool2_tmp = tf.reshape(pool2, [-1, fc1_input_size])
     a_fc1 = tf.nn.relu(tf.matmul(pool2_tmp, w_fc1) + b_fc1)
 
-    w_fc2 = tf.Variable(tf.truncated_normal([256,41], stddev=1.0/256))
-    b_fc2 = tf.Variable(tf.constant(0.0, shape=[41]))
+    w_fc2 = tf.Variable(tf.truncated_normal([256,output_size], stddev=1.0/256))
+    b_fc2 = tf.Variable(tf.constant(0.0, shape=[output_size]))
 #    a_fc2 = tf.nn.softmax(tf.matmul(a_fc1,w_fc2) + b_fc2)
     a_fc2 = tf.matmul(a_fc1,w_fc2)+b_fc2
 
@@ -42,7 +43,8 @@ def inference_old(image_pl,EPIWidth):
 
     return a_fc2
 
-def inference(images,EPIWidth):
+def inference(images,EPIWidth,disp_precision):
+    output_size = int(4/disp_precision)+1
     with tf.name_scope('hidden1'):
         weights = tf.Variable(
             tf.truncated_normal([9*EPIWidth*3, 512],
@@ -63,12 +65,18 @@ def inference(images,EPIWidth):
     # Linear
     with tf.name_scope('softmax_linear'):
         weights = tf.Variable(
-            tf.truncated_normal([256, 41],
+            tf.truncated_normal([256, output_size],
                                 stddev=1.0 / math.sqrt(float(256))),
             name='weights')
-        biases = tf.Variable(tf.zeros([41]),
+        biases = tf.Variable(tf.zeros([output_size]),
                              name='biases')
         logits = tf.matmul(hidden2, weights) + biases
+
+    print 'image:',images.get_shape()
+    print 'hidden1:',hidden1.get_shape()
+    print 'hidden2:',hidden2.get_shape()
+    print 'output:',logits.get_shape()
+
     return logits
 
 def loss(logits, labels):
@@ -88,4 +96,4 @@ def training(loss, learning_rate, global_step):
 def evaluation(logits, labels):
     correct = tf.nn.in_top_k(logits,labels,1)
 
-    return tf.reduce_mean(tf.cast(correct, tf.int32))
+    return tf.reduce_sum(tf.cast(correct, tf.int32))
