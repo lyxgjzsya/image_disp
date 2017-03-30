@@ -4,7 +4,7 @@ import tensorflow as tf
 import network
 import dataset
 import numpy as np
-EPIWidth = 32
+EPIWidth = 32##
 batch_size = 50
 box_path = '/home/luoyaox/Work/box'
 disp_precision = 0.1
