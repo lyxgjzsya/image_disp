@@ -72,7 +72,7 @@ def main():
 
             if step % 10000 == 0 :
                 if step != 0:
-                    saver.save(sess, "/home/luoyaox/Work/box/model.ckpt")
+#                    saver.save(sess, "/home/luoyaox/Work/box/model.ckpt")
                     print('Training Data Eval:')
                     do_eval(sess,eval_correct,images_placeholder,labels_placeholder,prop_placeholder,data_sets)
 

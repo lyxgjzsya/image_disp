@@ -14,8 +14,8 @@ class Dataset(object):
             images = images.reshape(images.shape[0],
                                     images.shape[1]*images.shape[2]*images.shape[3])
 
-#        images=images.astype(np.float32)
-#        images=np.multiply(images,1.0/255.0)
+        images=images.astype(np.float32)
+        images=np.multiply(images,1.0/255.0)
 
         self._images=images
         self._labels=labels
