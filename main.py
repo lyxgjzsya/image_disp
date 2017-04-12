@@ -39,7 +39,7 @@ def fill_feed_dict(data_sets, images_placeholder, labels_placeholder, prop_place
 
 
 def main():
-    data_sets = dataset.get_datasets(box_path, EPIWidth, disp_precision)
+    train_sets, test_sets = dataset.get_datasets(box_path, EPIWidth, disp_precision)
     with tf.Graph().as_default():
         global_step = tf.Variable(0, trainable=False)
 
@@ -69,7 +69,7 @@ def main():
 
         for step in xrange(100000):
 
-            feed_dict = fill_feed_dict(data_sets, images_placeholder, labels_placeholder, prop_placeholder)
+            feed_dict = fill_feed_dict(train_sets, images_placeholder, labels_placeholder, prop_placeholder)
             _, loss_value, output = sess.run([train_op, loss, logits], feed_dict=feed_dict)
 
             duration = time.time() - start_time
@@ -84,8 +84,9 @@ def main():
                 if step != 0:
                     saver.save(sess, box_path+"/model.ckpt")
                     print('Training Data Eval:')
-                    do_eval(sess, eval_correct, images_placeholder, labels_placeholder, prop_placeholder, data_sets)
+                    do_eval(sess, eval_correct, images_placeholder, labels_placeholder, prop_placeholder, test_sets)
 
 
 if __name__ == '__main__':
     main()
+

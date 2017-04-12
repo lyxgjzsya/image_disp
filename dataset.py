@@ -3,6 +3,12 @@ import numpy as np
 import os
 from PIL import Image
 
+data_cfg = {
+    'train_size':200000,
+    'test_size':60000,
+}
+
+
 class Dataset(object):
 
     def __init__(self,images,labels,reshape=False):
@@ -26,6 +32,25 @@ class Dataset(object):
         print "label_shape:",labels.shape
 
 
+    def next_batch(self,batch_size=1):
+        '''
+        get next batch
+        :param batch_size:
+        :return: next data&label batch
+        '''
+        start = self._index_in_epoch
+        self._index_in_epoch += batch_size
+        if self._index_in_epoch > self._num_examples or self._first:#如果大于一次循环，重新shuffle一次
+            self._first=False
+            self._images, self._labels = shuffle(self._images, self._labels)
+            start = 0
+            self._index_in_epoch = batch_size
+            assert batch_size <= self._num_examples
+        end = self._index_in_epoch
+
+        return self._images[start:end], self._labels[start:end]
+
+
     @property
     def images(self):
         return self._images
@@ -42,27 +67,6 @@ class Dataset(object):
     def epochs_completed(self):
         return self._epochs_completed
 
-    def next_batch(self,batch_size=1):
-        '''
-        get next batch
-        :param batch_size:
-        :return: next data&label batch
-        '''
-        start = self._index_in_epoch
-        self._index_in_epoch += batch_size
-        if self._index_in_epoch > self._num_examples or self._first:#如果大于一次循环，重新shuffle一次
-            self._first=False
-            perm = np.arange(self._num_examples)
-            np.random.shuffle(perm)
-            self._images = self._images[perm]
-            self._labels = self._labels[perm]
-            start = 0
-            self._index_in_epoch = batch_size
-            assert batch_size <= self._num_examples
-        end = self._index_in_epoch
-
-        return self._images[start:end], self._labels[start:end]
-
 
 def EPIextractor(image,EPIWidth):
     '''
@@ -77,12 +81,12 @@ def EPIextractor(image,EPIWidth):
     paddingtail = image[:,range(width-2,width-2-EPIWidth/2,-1),:]
     paddingtail = paddingtail[range(9-1,-1,-1),:,:]
     #在原图最左与最右 添加翻转过的内容作为边界填充 假设取9*16*3卷积 原图就变成9*(16/2+512+16/2)*3
-
     image = np.column_stack((paddinghead,image,paddingtail))
+    #去均值
     mean = np.mean(np.mean(image, 0), 0)
     image = image - mean
-    subEPI = [image[:,i:i+EPIWidth,:] for i in range(0,width)]
 
+    subEPI = [image[:,i:i+EPIWidth,:] for i in range(0,width)]
     return subEPI
 
 
@@ -105,7 +109,6 @@ def read_disp(dir,disp_precision,softmax=False):
     if softmax:
         for i in xrange(disp.shape[0]):
             disp[i] = int((disp[i]+2)/disp_precision)
-
 
     return disp
 
@@ -139,4 +142,19 @@ def get_datasets(dir,EPIWidth,disp_precision):
     new_disp = read_disp(dir+'/disp.txt',disp_precision,softmax=True)
     new_data = read_data(dir+'/epi36_44',EPIWidth)
 
-    return Dataset(new_data,new_disp)
+    new_data, new_disp = shuffle(new_data, new_disp)
+
+    train_num = data_cfg['train_size']
+    test_num = train_num + data_cfg['test_size']
+
+    train_data = Dataset(new_data[0:train_num],new_disp[0:train_num])
+    test_data = Dataset(new_data[train_num:test_num],new_disp[train_num:test_num])
+
+    return train_data,test_data
+
+def shuffle(data,disp):
+    assert data.shape[0]==disp.shape[0]
+    perm = np.arange(data.shape[0])
+    np.random.shuffle(perm)
+
+    return data[perm],disp[perm]

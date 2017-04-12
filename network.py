@@ -53,7 +53,6 @@ def loss(logits, labels):
 def training(loss, learning_rate, global_step):
     #    optimizer = tf.train.GradientDescentOptimizer(learning_rate)
     tf.summary.scalar('loss',loss)
-    tf.summary.histogram('histogram',loss)
     optimizer = tf.train.AdamOptimizer(learning_rate)
     train_op = optimizer.minimize(loss, global_step=global_step)
 
