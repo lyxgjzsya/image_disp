@@ -14,8 +14,8 @@ class Dataset(object):
             images = images.reshape(images.shape[0],
                                     images.shape[1]*images.shape[2]*images.shape[3])
 
-        images=images.astype(np.float32)
-        images=np.multiply(images,1.0/255.0)
+#        images=images.astype(np.float32)
+#        images=np.multiply(images,1.0/255.0)
 
         self._images=images
         self._labels=labels
@@ -77,10 +77,14 @@ def EPIextractor(image,EPIWidth):
     paddingtail = image[:,range(width-2,width-2-EPIWidth/2,-1),:]
     paddingtail = paddingtail[range(9-1,-1,-1),:,:]
     #在原图最左与最右 添加翻转过的内容作为边界填充 假设取9*16*3卷积 原图就变成9*(16/2+512+16/2)*3
+
     image = np.column_stack((paddinghead,image,paddingtail))
+    mean = np.mean(np.mean(image, 0), 0)
+    image = image - mean
     subEPI = [image[:,i:i+EPIWidth,:] for i in range(0,width)]
 
     return subEPI
+
 
 def read_disp(dir,disp_precision,softmax=False):
     '''
@@ -123,7 +127,6 @@ def read_data(dir,EPIWidth):
     for png_path in files:
         with open(png_path) as f:
             im = Image.open(f)
-            x=np.array(im)
             subEPI = EPIextractor(np.array(im),EPIWidth)
             datalist.append(subEPI)
     datas = np.array(datalist)
