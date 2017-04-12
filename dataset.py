@@ -5,7 +5,7 @@ from PIL import Image
 
 class Dataset(object):
 
-    def __init__(self,images,labels,reshape=True):
+    def __init__(self,images,labels,reshape=False):
         assert images.shape[0]==labels.shape[0], (
             'images.shape: %s labels.shape: %s' % (images.shape, labels.shape))
         self._num_examples=images.shape[0]
@@ -14,8 +14,8 @@ class Dataset(object):
             images = images.reshape(images.shape[0],
                                     images.shape[1]*images.shape[2]*images.shape[3])
 
-        images=images.astype(np.float32)
-        images=np.multiply(images,1.0/255.0)
+#        images=images.astype(np.float32)
+#        images=np.multiply(images,1.0/255.0)
 
         self._images=images
         self._labels=labels
@@ -78,7 +78,7 @@ def EPIextractor(image,EPIWidth):
     paddingtail = paddingtail[range(9-1,-1,-1),:,:]
     #在原图最左与最右 添加翻转过的内容作为边界填充 假设取9*16*3卷积 原图就变成9*(16/2+512+16/2)*3
     image = np.column_stack((paddinghead,image,paddingtail))
-    subEPI = [image[:,i-EPIWidth/2:i+EPIWidth/2,:] for i in range(EPIWidth/2,width+EPIWidth/2)]
+    subEPI = [image[:,i:i+EPIWidth,:] for i in range(0,width)]
 
     return subEPI
 
@@ -123,6 +123,7 @@ def read_data(dir,EPIWidth):
     for png_path in files:
         with open(png_path) as f:
             im = Image.open(f)
+            x=np.array(im)
             subEPI = EPIextractor(np.array(im),EPIWidth)
             datalist.append(subEPI)
     datas = np.array(datalist)
