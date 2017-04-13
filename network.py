@@ -42,6 +42,39 @@ def inference_old(image_pl,prop, EPIWidth, disp_precision):
 
     return a_fc2
 
+def inference_test(image_pl,prop, EPIWidth, disp_precision):
+    output_size = int(4 / disp_precision) + 1
+    tf.summary.image('input',image_pl)
+    input=tf.reshape(image_pl,[-1,9*33*3])
+
+    with tf.name_scope('hidden1'):
+        weights = tf.Variable(
+            tf.truncated_normal([891, 256],
+                                stddev=1.0 / math.sqrt(float(891))),
+            name='weights')
+        biases = tf.Variable(tf.zeros([256]),
+                             name='biases')
+        hidden1 = tf.nn.relu(tf.matmul(input, weights) + biases)
+    # Hidden 2
+    with tf.name_scope('hidden2'):
+        weights = tf.Variable(
+            tf.truncated_normal([256, 1024],
+                                stddev=1.0 / math.sqrt(float(256))),
+            name='weights')
+        biases = tf.Variable(tf.zeros([1024]),
+                             name='biases')
+        hidden2 = tf.nn.relu(tf.matmul(hidden1, weights) + biases)
+    # Linear
+    with tf.name_scope('softmax_linear'):
+        weights = tf.Variable(
+            tf.truncated_normal([1024, output_size],
+                                stddev=1.0 / math.sqrt(float(1024))),
+            name='weights')
+        biases = tf.Variable(tf.zeros([output_size]),
+                             name='biases')
+        logits = tf.matmul(hidden2, weights) + biases
+    return logits
+
 
 def loss(logits, labels):
 #    labels = tf.to_int64(labels)
@@ -58,6 +91,8 @@ def training(loss, learning_rate, global_step):
 
     return train_op
 
+def evaluationv2(logits):
+    return tf.nn.top_k(logits)
 
 def evaluation(logits, labels):
     correct = tf.nn.in_top_k(logits, labels, 1)

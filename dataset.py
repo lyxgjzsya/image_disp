@@ -11,20 +11,21 @@ data_cfg = {
 
 class Dataset(object):
 
-    def __init__(self,images,labels,reshape=False):
+    def __init__(self,images,labels,precision,type='test'):
         assert images.shape[0]==labels.shape[0], (
             'images.shape: %s labels.shape: %s' % (images.shape, labels.shape))
         self._num_examples=images.shape[0]
         print ('num of example:%d' % (self._num_examples))
-        if reshape:
-            images = images.reshape(images.shape[0],
-                                    images.shape[1]*images.shape[2]*images.shape[3])
 
 #        images=images.astype(np.float32)
 #        images=np.multiply(images,1.0/255.0)
 
         self._images=images
         self._labels=labels
+        if type=='train':
+           for i in xrange(self._num_examples):
+               self._labels[i] = int((self._labels[i]+2)/precision)
+
         self._epochs_completed = 0
         self._index_in_epoch = 0
         self._first=True
@@ -90,7 +91,7 @@ def EPIextractor(image,EPIWidth):
     return subEPI
 
 
-def read_disp(dir,disp_precision,softmax=False):
+def read_disp(dir):
     '''
     read disp.txt
     :param dir: the path to disp.txt
@@ -106,9 +107,6 @@ def read_disp(dir,disp_precision,softmax=False):
             disp_list.append(data)
     disp = np.array(disp_list)
     disp = disp.reshape(disp.shape[0] * disp.shape[1])
-    if softmax:
-        for i in xrange(disp.shape[0]):
-            disp[i] = int((disp[i]+2)/disp_precision)
 
     return disp
 
@@ -139,16 +137,16 @@ def read_data(dir,EPIWidth):
 
 
 def get_datasets(dir,EPIWidth,disp_precision):
-    new_disp = read_disp(dir+'/disp.txt',disp_precision,softmax=True)
-    new_data = read_data(dir+'/epi36_44',EPIWidth)
+    disp = read_disp(dir+'/disp.txt')
+    data = read_data(dir+'/epi36_44',EPIWidth)
 
-    new_data, new_disp = shuffle(new_data, new_disp)
+    data, disp = shuffle(data, disp)
 
     train_num = data_cfg['train_size']
     test_num = train_num + data_cfg['test_size']
 
-    train_data = Dataset(new_data[0:train_num],new_disp[0:train_num])
-    test_data = Dataset(new_data[train_num:test_num],new_disp[train_num:test_num])
+    train_data = Dataset(data[0:train_num],disp[0:train_num],disp_precision,type='train')
+    test_data = Dataset(data[train_num:test_num],disp[train_num:test_num],disp_precision)
 
     return train_data,test_data
 

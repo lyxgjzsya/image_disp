@@ -15,13 +15,30 @@ checkpoint_path = main_path+'/image_disp/checkpoint'
 disp_precision = 0.07
 
 
-def do_eval(sess, eval_correct, images_placeholder, labels_placeholder, prop_placeholder, data_set):
+def do_eval(sess, eval_correct, images, labels, prop, data_set):
     true_count = 0
     steps_per_epoch = data_set.num_examples // batch_size
     num_example = steps_per_epoch * batch_size
     for step in xrange(steps_per_epoch):
-        feed_dict = fill_feed_dict(data_set, images_placeholder, labels_placeholder, prop_placeholder, mode='test')
+        feed_dict = fill_feed_dict(data_set, images, labels, prop, mode='test')
         true_count += sess.run(eval_correct, feed_dict=feed_dict)
+    precision = float(true_count) / num_example
+    print ('example: %d, correct: %d, Precision: %0.04f' % (num_example, true_count, precision))
+
+def do_eval_true(sess, eval, images_pl, data_set):
+    true_count = 0
+    steps_per_epoch = data_set.num_examples // batch_size
+    num_example = steps_per_epoch * batch_size
+    for step in xrange(steps_per_epoch):
+        images, label = data_set.next_batch(batch_size)
+        feed_dict = {images_pl:images}
+        output = sess.run(eval,feed_dict=feed_dict)
+        for i in xrange(batch_size):
+            disp = (output[1][i]*disp_precision)-2+disp_precision/2
+            if disp>2:
+                disp=2
+            true_count += abs(disp-label[i])<0.07
+
     precision = float(true_count) / num_example
     print ('example: %d, correct: %d, Precision: %0.04f' % (num_example, true_count, precision))
 
@@ -48,13 +65,16 @@ def main():
         labels_placeholder = tf.placeholder(tf.int32, shape=None)
         prop_placeholder = tf.placeholder('float')
 
-        logits = network.inference_old(images_placeholder, prop_placeholder, EPIWidth, disp_precision)
+
+        logits = network.inference_test(images_placeholder, prop_placeholder, EPIWidth, disp_precision)
 
         loss = network.loss(logits, labels_placeholder)
 
         train_op = network.training(loss, 1e-4, global_step)
 
         eval_correct = network.evaluation(logits, labels_placeholder)
+
+        evalv2 = network.evaluationv2(logits)
 
         summary = tf.summary.merge_all()
 
@@ -68,7 +88,7 @@ def main():
 
         ckpt = tf.train.get_checkpoint_state(checkpoint_path)
         if ckpt:
-            saver.restore(sess,checkpoint_path+'/model.ckpt')#从其他平台训练的结果
+#            saver.restore(sess,checkpoint_path+'/model.ckpt')#从其他平台训练的结果
 #            saver.restore(sess,ckpt.model_checkpoint_path)#本地训练的结果
             print ("restore from checkpoint!")
         else:
@@ -89,11 +109,13 @@ def main():
                 summary_writer.add_summary(summary_str, step)
                 summary_writer.flush()
 
-            if step % 10000 == 0:
+            if step % 2000 == 0:
                 if step != 0:
                     saver.save(sess, checkpoint_path+'/model.ckpt',global_step=step)
                     print('Training Data Eval:')
-                    do_eval(sess, eval_correct, images_placeholder, labels_placeholder, prop_placeholder, test_sets)
+#                    do_eval(sess, eval_correct, images_placeholder, labels_placeholder, prop_placeholder, test_sets)
+                    do_eval_true(sess,evalv2,images_placeholder,test_sets)
+
 
 
 if __name__ == '__main__':
