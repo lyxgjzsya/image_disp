@@ -25,13 +25,16 @@ def do_eval(sess, eval_correct, images, labels, prop, data_set):
     precision = float(true_count) / num_example
     print ('example: %d, correct: %d, Precision: %0.04f' % (num_example, true_count, precision))
 
-def do_eval_true(sess, eval, images_pl, data_set):
+def do_eval_true(sess, eval, images_pl, prop, data_set):
     true_count = 0
     steps_per_epoch = data_set.num_examples // batch_size
     num_example = steps_per_epoch * batch_size
     for step in xrange(steps_per_epoch):
         images, label = data_set.next_batch(batch_size)
-        feed_dict = {images_pl:images}
+        feed_dict = {
+            images_pl:images,
+            prop:1,
+        }
         output = sess.run(eval,feed_dict=feed_dict)
         for i in xrange(batch_size):
             disp = (output[1][i]*disp_precision)-2+disp_precision/2
@@ -66,7 +69,7 @@ def main():
         prop_placeholder = tf.placeholder('float')
 
 
-        logits = network.inference_test(images_placeholder, prop_placeholder, EPIWidth, disp_precision)
+        logits = network.inference_old(images_placeholder, prop_placeholder, EPIWidth, disp_precision)
 
         loss = network.loss(logits, labels_placeholder)
 
@@ -109,12 +112,12 @@ def main():
                 summary_writer.add_summary(summary_str, step)
                 summary_writer.flush()
 
-            if step % 2000 == 0:
+            if step % 200 == 0:
                 if step != 0:
                     saver.save(sess, checkpoint_path+'/model.ckpt',global_step=step)
                     print('Training Data Eval:')
 #                    do_eval(sess, eval_correct, images_placeholder, labels_placeholder, prop_placeholder, test_sets)
-                    do_eval_true(sess,evalv2,images_placeholder,test_sets)
+                    do_eval_true(sess,evalv2,images_placeholder,prop_placeholder,test_sets)
 
 
 
