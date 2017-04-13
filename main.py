@@ -10,8 +10,8 @@ batch_size = 50
 main_path = '/home/luoyaox/Work'
 #main_path = '/home/cs505/workspace/luo_space'
 box_path = main_path+'/box'
-summary_path = main_path+'/summary'
-checkpoint_path = main_path+'/checkpoint'
+summary_path = main_path+'/image_disp/summary'
+checkpoint_path = main_path+'/image_disp/checkpoint'
 disp_precision = 0.07
 
 
