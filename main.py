@@ -3,14 +3,15 @@ import time
 import tensorflow as tf
 import network
 import dataset
-import os.path
-import numpy as np
+
 
 EPIWidth = 33
 batch_size = 50
-box_path = '/home/luoyaox/Work/box'
-summary_path = '/home/luoyaox/Work/summary'
-# box_path = '/home/cs505/workspace/luo_space/box'
+main_path = '/home/luoyaox/Work'
+#main_path = '/home/cs505/workspace/luo_space'
+box_path = main_path+'/box'
+summary_path = main_path+'/summary'
+checkpoint_path = main_path+'/checkpoint'
 disp_precision = 0.07
 
 
@@ -57,13 +58,21 @@ def main():
 
         summary = tf.summary.merge_all()
 
-        saver = tf.train.Saver()
+        saver = tf.train.Saver(tf.global_variables())
 
         sess = tf.Session()
 
         summary_writer = tf.summary.FileWriter(summary_path, sess.graph)
 
         sess.run(tf.global_variables_initializer())
+
+        ckpt = tf.train.get_checkpoint_state(checkpoint_path)
+        if ckpt:
+            saver.restore(sess,checkpoint_path+'/model.ckpt')#从其他平台训练的结果
+#            saver.restore(sess,ckpt.model_checkpoint_path)#本地训练的结果
+            print ("restore from checkpoint!")
+        else:
+            print("no checkpoint found!")
 
         start_time = time.time()
 
@@ -82,7 +91,7 @@ def main():
 
             if step % 10000 == 0:
                 if step != 0:
-                    saver.save(sess, box_path+"/model.ckpt")
+                    saver.save(sess, checkpoint_path+'/model.ckpt',global_step=step)
                     print('Training Data Eval:')
                     do_eval(sess, eval_correct, images_placeholder, labels_placeholder, prop_placeholder, test_sets)
 
