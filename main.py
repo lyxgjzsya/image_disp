@@ -69,13 +69,13 @@ def main():
         prop_placeholder = tf.placeholder('float')
 
 
-        logits = network.inference_old(images_placeholder, prop_placeholder, EPIWidth, disp_precision)
+        logits = network.inference_test(images_placeholder, prop_placeholder, EPIWidth, disp_precision)
 
         loss = network.loss(logits, labels_placeholder)
 
         train_op = network.training(loss, 1e-4, global_step)
 
-        eval_correct = network.evaluation(logits, labels_placeholder)
+#        eval_correct = network.evaluation(logits, labels_placeholder)
 
         evalv2 = network.evaluationv2(logits)
 
