@@ -6,7 +6,7 @@ import dataset
 
 
 EPIWidth = 33
-batch_size = 50
+batch_size = 200
 main_path = '/home/luoyaox/Work'
 #main_path = '/home/cs505/workspace/luo_space'
 box_path = main_path+'/box'
