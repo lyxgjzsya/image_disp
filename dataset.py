@@ -22,7 +22,7 @@ class Dataset(object):
 
         self._images=images
         self._labels=labels
-        if type=='train':
+        if type=='train':#train数据的label转化为分类class
            for i in xrange(self._num_examples):
                self._labels[i] = int((self._labels[i]+2)/precision)
 

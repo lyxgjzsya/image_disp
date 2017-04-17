@@ -112,7 +112,7 @@ def main():
                 summary_writer.add_summary(summary_str, step)
                 summary_writer.flush()
 
-            if step % 200 == 0:
+            if step % 10000 == 9999:
                 if step != 0:
                     saver.save(sess, checkpoint_path+'/model.ckpt',global_step=step)
                     print('Training Data Eval:')

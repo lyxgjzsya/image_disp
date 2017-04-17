@@ -9,15 +9,17 @@ def inference(image_pl,prop, EPIWidth, disp_precision):
 
     hidden1 = conv2d(image_pl,[3,3,3,64],'Convolution_1')
     pool1 = pool(hidden1,[1,1,2,1],[1,1,2,1],'Max_Pooling_1')
+#    norm1 = tf.nn.lrn(pool1,4,bias=1.0,alpha=1e-3/9.0,beta=0.75,name='norm1')
 
     hidden2 = conv2d(pool1,[3,3,64,128],'Convolution_2')
+#    norm2 = tf.nn.lrn(hidden2,4,bias=1.0,alpha=1e-3/9.0,beta=0.75,name='norm2')
     pool2 = pool(hidden2,[1,1,2,1],[1,1,2,1],'Max_Pooling_2')
 
     pool2_shape = pool2.get_shape()
     fc1_input_size = int(pool2_shape[1] * pool2_shape[2] * pool2_shape[3])
     pool2_resize = tf.reshape(pool2, [-1, fc1_input_size])
 
-    hidden3 = fc(pool2_resize,fc1_input_size,1024,'FullyConnection_1')
+    hidden3 = fc(pool2_resize,fc1_input_size,1024,'FullyConnection_1',wd=0.004)
     hidden3_drop = tf.nn.dropout(hidden3,prop)
 
     output = fc(hidden3_drop,1024,output_size,'FullyConnection_2')
@@ -42,7 +44,13 @@ def loss(logits, labels):
 def training(loss, learning_rate, global_step):
     #    optimizer = tf.train.GradientDescentOptimizer(learning_rate)
     tf.summary.scalar('loss',loss)
-    optimizer = tf.train.AdamOptimizer(learning_rate)
+
+#    num_batches_per_epoch = 200000/50
+#    decay_step = int(num_batches_per_epoch*10)
+    lr = tf.train.exponential_decay(learning_rate,global_step,10000,0.5,staircase=True)
+
+    optimizer = tf.train.AdamOptimizer(lr)
+#    optimizer = tf.train.MomentumOptimizer(lr,0.9)
     train_op = optimizer.minimize(loss, global_step=global_step)
 
     return train_op
@@ -74,7 +82,7 @@ def pool(input_tensor, kernel_size, strides, layer_name):
         return output
 
 
-def fc(input_tensor, input_size, output_size, layer_name, act=tf.nn.relu):
+def fc(input_tensor, input_size, output_size, layer_name, act=tf.nn.relu, wd=0.0):
     with tf.name_scope(layer_name):
         with tf.name_scope('weights'):
             weights = tf.Variable(tf.truncated_normal([input_size, output_size], stddev=1.0 / math.sqrt(float(input_size))))
@@ -83,6 +91,9 @@ def fc(input_tensor, input_size, output_size, layer_name, act=tf.nn.relu):
         with tf.name_scope('preactivate'):
             preactivate = tf.matmul(input_tensor,weights)+biases
         activations = act(preactivate, name='activation')
+        if wd:
+            weight_decay = tf.multiply(tf.nn.l2_loss(weights),wd,name='weight_loss')
+            tf.add_to_collection('losses',weight_decay)
         return activations
 
 
