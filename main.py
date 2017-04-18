@@ -9,7 +9,6 @@ EPIWidth = 33
 batch_size = 200
 main_path = '/home/luoyaox/Work'
 #main_path = '/home/cs505/workspace/luo_space'
-box_path = main_path+'/box'
 summary_path = main_path+'/image_disp/summary'
 checkpoint_path = main_path+'/image_disp/checkpoint'
 disp_precision = 0.07
@@ -56,7 +55,7 @@ def fill_feed_dict(data_sets, images_placeholder, labels_placeholder, prop_place
 
 def main():
     with tf.Graph().as_default():
-        train_sets, validate_sets = dataset.get_datasets(box_path, EPIWidth, disp_precision)
+        train_sets = dataset.get_datasets(main_path, EPIWidth, disp_precision)
 
         global_step = tf.Variable(0, trainable=False)
 
@@ -94,7 +93,7 @@ def main():
 
         for step in xrange(100000):
 
-            feed_dict = fill_feed_dict(train_sets, images_placeholder, labels_placeholder, prop_placeholder)
+            feed_dict = fill_feed_dict(train_sets, images_placeholder, labels_placeholder, prop_placeholder,mode='train')
             _, loss_value, output = sess.run([train_op, loss, logits], feed_dict=feed_dict)
 
             duration = time.time() - start_time
@@ -108,7 +107,7 @@ def main():
             if step % 10000 == 9999:
                 saver.save(sess, checkpoint_path+'/model.ckpt',global_step=step)
                 print('Training Data Eval:')
-                do_eval_true(sess,eval,images_placeholder,prop_placeholder,validate_sets)
+                do_eval_true(sess,eval,images_placeholder,prop_placeholder,train_sets)
 
 
 
