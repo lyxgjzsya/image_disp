@@ -5,27 +5,21 @@ from PIL import Image
 
 data_cfg = {
     'train_size':200000,
-    'test_size':60000,
+    'validate_size':60000,
 }
 
 
 class Dataset(object):
 
-    def __init__(self,images,labels,precision,type='test'):
+    def __init__(self,images,labels,precision):
         assert images.shape[0]==labels.shape[0], (
             'images.shape: %s labels.shape: %s' % (images.shape, labels.shape))
         self._num_examples=images.shape[0]
         print ('num of example:%d' % (self._num_examples))
 
-#        images=images.astype(np.float32)
-#        images=np.multiply(images,1.0/255.0)
-
+        #label是原生的浮点label
         self._images=images
         self._labels=labels
-        if type=='train':#train数据的label转化为分类class
-           for i in xrange(self._num_examples):
-               self._labels[i] = int((self._labels[i]+2)/precision)
-
         self._epochs_completed = 0
         self._index_in_epoch = 0
         self._first=True
@@ -34,15 +28,10 @@ class Dataset(object):
 
 
     def next_batch(self,batch_size=1):
-        '''
-        get next batch
-        :param batch_size:
-        :return: next data&label batch
-        '''
         start = self._index_in_epoch
         self._index_in_epoch += batch_size
-        if self._index_in_epoch > self._num_examples or self._first:#如果大于一次循环，重新shuffle一次
-            self._first=False
+        if self._index_in_epoch > self._num_examples:
+            #如果大于一次循环，重新shuffle一次
             self._images, self._labels = shuffle(self._images, self._labels)
             start = 0
             self._index_in_epoch = batch_size
@@ -143,12 +132,12 @@ def get_datasets(dir,EPIWidth,disp_precision):
     data, disp = shuffle(data, disp)
 
     train_num = data_cfg['train_size']
-    test_num = train_num + data_cfg['test_size']
+    validate_num = train_num + data_cfg['validate_size']
 
-    train_data = Dataset(data[0:train_num],disp[0:train_num],disp_precision,type='train')
-    test_data = Dataset(data[train_num:test_num],disp[train_num:test_num],disp_precision)
+    train_data = Dataset(data[0:train_num],disp[0:train_num],disp_precision)
+    validate_data = Dataset(data[train_num:validate_num],disp[train_num:validate_num],disp_precision)
 
-    return train_data,test_data
+    return train_data,validate_data
 
 def shuffle(data,disp):
     assert data.shape[0]==disp.shape[0]

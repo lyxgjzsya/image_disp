@@ -15,27 +15,18 @@ checkpoint_path = main_path+'/image_disp/checkpoint'
 disp_precision = 0.07
 
 
-def do_eval(sess, eval_correct, images, labels, prop, data_set):
-    true_count = 0
-    steps_per_epoch = data_set.num_examples // batch_size
-    num_example = steps_per_epoch * batch_size
-    for step in xrange(steps_per_epoch):
-        feed_dict = fill_feed_dict(data_set, images, labels, prop, mode='test')
-        true_count += sess.run(eval_correct, feed_dict=feed_dict)
-    precision = float(true_count) / num_example
-    print ('example: %d, correct: %d, Precision: %0.04f' % (num_example, true_count, precision))
+def trans(x):
+    r = int((x+2)/disp_precision)
+    return r
 
 def do_eval_true(sess, eval, images_pl, prop, data_set):
     true_count = 0
     steps_per_epoch = data_set.num_examples // batch_size
     num_example = steps_per_epoch * batch_size
     for step in xrange(steps_per_epoch):
-        images, label = data_set.next_batch(batch_size)
-        feed_dict = {
-            images_pl:images,
-            prop:1,
-        }
-        output = sess.run(eval,feed_dict=feed_dict)
+        labels_pl = tf.placeholder(tf.float32, shape=None)
+        feed_dict = fill_feed_dict(data_set,images_pl,labels_pl,prop,mode='test')
+        output, label = sess.run([eval, labels_pl],feed_dict=feed_dict)
         for i in xrange(batch_size):
             disp = (output[1][i]*disp_precision)-2+disp_precision/2
             if disp>2:
@@ -51,6 +42,10 @@ def fill_feed_dict(data_sets, images_placeholder, labels_placeholder, prop_place
     prop = 0.5
     if mode == 'test':
         prop = 1
+        labels = labels
+    elif mode == 'train':
+        #训练时label转为class
+        labels = map(trans,labels)
     feed_dict = {
         images_placeholder: images,
         labels_placeholder: labels,
@@ -60,14 +55,14 @@ def fill_feed_dict(data_sets, images_placeholder, labels_placeholder, prop_place
 
 
 def main():
-    train_sets, test_sets = dataset.get_datasets(box_path, EPIWidth, disp_precision)
     with tf.Graph().as_default():
+        train_sets, validate_sets = dataset.get_datasets(box_path, EPIWidth, disp_precision)
+
         global_step = tf.Variable(0, trainable=False)
 
         images_placeholder = tf.placeholder(tf.float32, shape=(None, 9, EPIWidth, 3))
         labels_placeholder = tf.placeholder(tf.int32, shape=None)
         prop_placeholder = tf.placeholder('float')
-
 
         logits = network.inference_test(images_placeholder, prop_placeholder, EPIWidth, disp_precision)
 
@@ -75,9 +70,7 @@ def main():
 
         train_op = network.training(loss, 1e-4, global_step)
 
-#        eval_correct = network.evaluation(logits, labels_placeholder)
-
-        evalv2 = network.evaluationv2(logits)
+        eval = network.evaluation(logits)
 
         summary = tf.summary.merge_all()
 
@@ -113,11 +106,9 @@ def main():
                 summary_writer.flush()
 
             if step % 10000 == 9999:
-                if step != 0:
-                    saver.save(sess, checkpoint_path+'/model.ckpt',global_step=step)
-                    print('Training Data Eval:')
-#                    do_eval(sess, eval_correct, images_placeholder, labels_placeholder, prop_placeholder, test_sets)
-                    do_eval_true(sess,evalv2,images_placeholder,prop_placeholder,test_sets)
+                saver.save(sess, checkpoint_path+'/model.ckpt',global_step=step)
+                print('Training Data Eval:')
+                do_eval_true(sess,eval,images_placeholder,prop_placeholder,validate_sets)
 
 
 

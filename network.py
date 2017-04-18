@@ -55,14 +55,10 @@ def training(loss, learning_rate, global_step):
 
     return train_op
 
-def evaluationv2(logits):
+def evaluation(logits):
     return tf.nn.top_k(logits)
 
-def evaluation(logits, labels):
-    correct = tf.nn.in_top_k(logits, labels, 1)
-
-    return tf.reduce_sum(tf.cast(correct, tf.int32))
-
+'''------------------------------以下为辅助函数-------------------------------------'''
 
 def conv2d(input_tensor, kernel_size, layer_name, act=tf.nn.relu):
     with tf.name_scope(layer_name):
