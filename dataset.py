@@ -20,10 +20,12 @@ class Dataset(object):
 
 
     def next_dataset(self):
-        if self._type == 'train':
-            self._index_of_image = random.randint(0,self._num_of_path-1)
-        elif self._type == 'test':
-            self._index_of_image += 1
+        #if self._type == 'train':
+        #    self._index_of_image = random.randint(0,self._num_of_path-1)
+        #elif self._type == 'test':
+        self._index_of_image += 1
+        if self._index_of_image == self._num_of_path:
+            self._index_of_image = 0
 
         print ('next')
         print (self._Path.data[self._index_of_image])

@@ -19,15 +19,15 @@ def trans(x):
     return r
 
 def do_eval_true(sess, eval, images_pl, prop, data_set):
-    while data_set.index_of_image < data_set.num_of_path:
+    while data_set.index_of_image < 4:#data_set.num_of_path:
         true_count = 0
-        steps_per_epoch = data_set.num_examples // batch_size
-        num_example = steps_per_epoch * batch_size
+        steps_per_epoch = data_set.num_examples // 2048
+        num_example = steps_per_epoch * 2048
         for step in xrange(steps_per_epoch):
             labels_pl = tf.placeholder(tf.float32, shape=None)
             feed_dict = fill_feed_dict(data_set,images_pl,labels_pl,prop,mode='test')
             output, label = sess.run([eval, labels_pl],feed_dict=feed_dict)
-            for i in xrange(batch_size):
+            for i in xrange(2048):
                 disp = (output[1][i]*disp_precision)-2+disp_precision/2
                 true_count += abs(disp-label[i])<0.07
         precision = float(true_count) / num_example
@@ -36,7 +36,10 @@ def do_eval_true(sess, eval, images_pl, prop, data_set):
 
 
 def fill_feed_dict(data_sets, images_placeholder, labels_placeholder, prop_placeholder, mode='train'):
-    images, labels = data_sets.next_batch(batch_size)
+    count = batch_size
+    if mode == 'test':
+        count = 2048
+    images, labels = data_sets.next_batch(count)
     prop = 0.5
     if mode == 'test':
         prop = 1
