@@ -18,6 +18,8 @@ def EPIextractor(image,EPIWidth):
     #在原图最左与最右 添加翻转过的内容作为边界填充 假设取9*16*3卷积 原图就变成9*(16/2+512+16/2)*3
     image = np.column_stack((paddinghead,image,paddingtail))
     #去均值
+#    image = image.astype(np.float32)
+#    image = np.multiply(image,1.0/255.0)
     mean = np.mean(np.mean(image, 0), 0)
     image = image - mean
 
@@ -70,10 +72,15 @@ def read_data(dir,EPIWidth):
     return datas
 
 
-def get_path_list(root):
+def get_path_list(root,type):
     list_data = []
     list_disp = []
-    train_data_path = root+'/full_data/training'
+    if type == 'train':
+        train_data_path = root+'/full_data/training'
+    elif type == 'test':
+        train_data_path = root+'/full_data/additional'
+    else:
+        train_data_path = root+'???'
     filelist = os.listdir(train_data_path)
     for f in filelist:
         if os.path.isdir(train_data_path + '/' + f):
