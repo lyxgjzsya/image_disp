@@ -20,18 +20,13 @@ class Dataset(object):
 
 
     def next_dataset(self):
-        #if self._type == 'train':
-        #    self._index_of_image = random.randint(0,self._num_of_path-1)
-        #elif self._type == 'test':
         self._index_of_image += 1
         if self._index_of_image == self._num_of_path:
             self._index_of_image = 0
 
-        print ('next')
-        print (self._Path.data[self._index_of_image])
-        print (self._Path.disp[self._index_of_image])
         self._labels = io.read_disp(self._Path.disp[self._index_of_image])
-        self._images = io.read_data(self._Path.data[self._index_of_image],self._EPIWidth)
+        images = io.read_data(self._Path.data[self._index_of_image],self._EPIWidth)
+        self._images = io.preprocess(images)
 
         if self._type == 'train':
             self._images, self._labels = shuffle(self._images, self._labels)

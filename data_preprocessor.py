@@ -3,30 +3,6 @@ import numpy as np
 import os
 from PIL import Image
 
-def EPIextractor(image,EPIWidth):
-    '''
-    turn big EPI to small EPI patch
-    :param image:np.array[9,512,3] EPI
-    :return:list[512,9,EPIwidth,3]
-    '''
-    height = image.shape[0]
-    width = image.shape[1]
-    paddinghead = image[:,range(EPIWidth/2,0,-1),:]#左右颠倒
-    paddinghead = paddinghead[range(9-1,-1,-1),:,:] #上下颠倒
-    paddingtail = image[:,range(width-2,width-2-EPIWidth/2,-1),:]
-    paddingtail = paddingtail[range(9-1,-1,-1),:,:]
-    #在原图最左与最右 添加翻转过的内容作为边界填充 假设取9*16*3卷积 原图就变成9*(16/2+512+16/2)*3
-    image = np.column_stack((paddinghead,image,paddingtail))
-    #去均值
-#    image = image.astype(np.float32)
-#    image = np.multiply(image,1.0/255.0)
-    mean = np.mean(np.mean(image, 0), 0)
-    image = image - mean
-
-    subEPI = [image[:,i:i+EPIWidth,:] for i in range(0,width)]
-    return subEPI
-
-
 def read_disp(dir):
     '''
     read disp.txt
@@ -96,6 +72,43 @@ def get_path_list(root,type):
             list_disp.append(dispname)
 
     return list_data,list_disp
+
+
+def preprocess(image):
+    image=image.astype(np.float32)
+    count = image.shape[0]
+    for i in xrange(count):
+        image[i] = reduce_mean(image[i])
+    return image
+
+
+'''--------------以下辅助函数-----------------------'''
+def reduce_mean(image):
+    mean = np.mean(np.mean(image,0),0)
+    image = image - mean
+    return image
+
+
+def EPIextractor(image,EPIWidth):
+    '''
+    turn big EPI to small EPI patch
+    :param image:np.array[9,512,3] EPI
+    :return:list[512,9,EPIwidth,3]
+    '''
+    height = image.shape[0]
+    width = image.shape[1]
+    paddinghead = image[:,range(EPIWidth/2,0,-1),:]#左右颠倒
+    paddinghead = paddinghead[range(9-1,-1,-1),:,:] #上下颠倒
+    paddingtail = image[:,range(width-2,width-2-EPIWidth/2,-1),:]
+    paddingtail = paddingtail[range(9-1,-1,-1),:,:]
+    #在原图最左与最右 添加翻转过的内容作为边界填充 假设取9*16*3卷积 原图就变成9*(16/2+512+16/2)*3
+    image = np.column_stack((paddinghead,image,paddingtail))
+
+#    mean = np.mean(np.mean(image, 0), 0)
+#    image = image - mean
+
+    subEPI = [image[:,i:i+EPIWidth,:] for i in range(0,width)]
+    return subEPI
 
 
 '''fang'''
