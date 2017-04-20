@@ -7,7 +7,7 @@ import math
 def inference(image_pl,prop, EPIWidth, disp_precision):
     output_size = int(4 / disp_precision) + 1
 
-    hidden1 = conv2d(image_pl,[3,3,3,64],'Convolution_1')
+    hidden1 = conv2d(image_pl,[3,3,6,64],'Convolution_1')
     pool1 = pool(hidden1,[1,1,2,1],[1,1,2,1],'Max_Pooling_1')
 #    norm1 = tf.nn.lrn(pool1,4,bias=1.0,alpha=1e-3/9.0,beta=0.75,name='norm1')
 
@@ -99,11 +99,11 @@ def inference_test(image_pl,prop, EPIWidth, disp_precision):
     '''
     output_size = int(4 / disp_precision) + 1
 
-    input=tf.reshape(image_pl,[-1,9*33*3])
+    input=tf.reshape(image_pl,[-1,9*33*6])
 
     with tf.name_scope('hidden1'):
         weights = tf.Variable(
-            tf.truncated_normal([891, 256],
+            tf.truncated_normal([891*2, 256],
                                 stddev=1.0 / math.sqrt(float(891))),
             name='weights')
         biases = tf.Variable(tf.zeros([256]),

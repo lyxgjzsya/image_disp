@@ -62,7 +62,7 @@ def main():
 
         global_step = tf.Variable(0, trainable=False)
 
-        images_placeholder = tf.placeholder(tf.float32, shape=(None, 9, EPIWidth, 3))
+        images_placeholder = tf.placeholder(tf.float32, shape=(None, 9, EPIWidth, 3*2))
         labels_placeholder = tf.placeholder(tf.int32, shape=None)
         prop_placeholder = tf.placeholder('float')
 
@@ -117,5 +117,25 @@ def main():
 if __name__ == '__main__':
     main()
 
+    #通道叠加测试
+    a=np.arange(0,72)
+    a=a.reshape([2,2,3,3,2])
+    b=np.arange(0,72)
+    b=b.reshape([2,2,3,3,2])
+
+    a1=a.reshape([36,2])
+    b1=b.reshape([36,2])
+    result1 = np.column_stack((a1,b1))
+    result1 = result1.reshape([2,2,3,3,4])
+
+    result2 = []
+    a2=a.reshape([4,3,3,2])
+    b2=b.reshape([4,3,3,2])
+    for i in xrange(4):
+        tmp=np.dstack((a2[i],b2[i]))
+        result2.append(tmp)
+    result2 = np.array(result2)
+
+    print 'done'
 
 
