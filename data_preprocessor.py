@@ -4,12 +4,6 @@ import os
 from PIL import Image
 
 def read_disp(dir):
-    '''
-    read disp.txt
-    :param dir: the path to disp.txt
-    :return: np.array[512*512] image.shape[0]*image.shape[1]
-            if hot == True return hot table for classify
-    '''
     disp_list = []  # 512*512
     with open(dir, 'r') as f:
         for line in f.readlines():
@@ -22,30 +16,31 @@ def read_disp(dir):
 
     return disp
 
-def read_data(dir,EPIWidth):
-    '''
-    read EPI and turn it to small EPI
-    :param dir:
-    :return: np.array[(512*512),9,EPIwidth,3]
-    '''
-    files = []
-    datalist = []
-    filelist = os.listdir(dir)
-    for f in filelist:
-        if os.path.isfile(dir+'/'+f):
-            filename = dir+'/'+f
-            if filename.find('.png') != -1:
-                files.append(filename)
-    files.sort()
-    for png_path in files:
-        with open(png_path) as f:
-            im = Image.open(f)
-            subEPI = EPIextractor(np.array(im),EPIWidth)
-            datalist.append(subEPI)
-    datas = np.array(datalist)
-    datas = datas.reshape([datas.shape[0]*datas.shape[1],datas.shape[2],datas.shape[3],datas.shape[4]])
 
-    return datas
+def read_data(dir,EPIWidth,UV_Plus=False):
+#    EPI_u_path = dir + '/Patch_U.npy'
+#    if not os.path.exists(EPI_u_path):
+#        PatchGenerator(dir,EPIWidth,'U')
+#    EPI_u = np.load(EPI_u_path)
+#    data = EPI_u
+    if UV_Plus:
+        EPI_v_path = dir + '/Patch_V.npy'
+        if not os.path.exists(EPI_v_path):
+            PatchGenerator(dir,EPIWidth,'V')
+        EPI_v = np.load(EPI_v_path)
+        #EPI_v对应的label要和u统一则需先转置
+        EPI_v = np.transpose(EPI_v,(0,1,3,2,4))#h*w*EPIWidth*9*3 -> h*w*9*EPIWidth*3 针对卷积参数适应
+        EPI_v = np.transpose(EPI_v,(1,0,2,3,4))#h*w*9*EPIWidth*3 -> w*h*9*EPIWidth*3 针对label对应
+        #通道合并
+#        shape = EPI_u.shape
+#        EPI_u = EPI_u.reshape([shape[0]*shape[1]*shape[2]*shape[3],shape[4]])
+#        EPI_v = EPI_v.reshape([shape[0]*shape[1]*shape[2]*shape[3],shape[4]])
+#        data = np.column_stack((EPI_u,EPI_v))
+#        data = data.reshape([shape[0],shape[1],shape[2],shape[3],shape[4]*2])
+    data = EPI_v
+    data = data.reshape([data.shape[0] * data.shape[1], data.shape[2], data.shape[3], data.shape[4]])
+
+    return data
 
 
 def get_path_list(root,type):
@@ -61,13 +56,7 @@ def get_path_list(root,type):
     for f in filelist:
         if os.path.isdir(train_data_path + '/' + f):
             foldername = train_data_path + '/' + f
-            if not os.path.exists(foldername+'/epi36_44'):
-                print ('create '+f+'\'s EPI')
-                files = FileHelper.get_files(foldername)
-                creator = EPIcreator(files)
-                creator.create((36,44))
             dispname = train_data_path + '/' + f + '_disp.txt'
-            foldername += '/epi36_44'
             list_data.append(foldername)
             list_disp.append(dispname)
 
@@ -79,6 +68,7 @@ def preprocess(image):
     count = image.shape[0]
     for i in xrange(count):
         image[i] = reduce_mean(image[i])
+        pass
     return image
 
 
@@ -89,26 +79,53 @@ def reduce_mean(image):
     return image
 
 
-def EPIextractor(image,EPIWidth):
-    '''
-    turn big EPI to small EPI patch
-    :param image:np.array[9,512,3] EPI
-    :return:list[512,9,EPIwidth,3]
-    '''
+def EPIextractor(image,EPIWidth,mode):
+    assert mode == 'U' or mode == 'V'
     height = image.shape[0]
     width = image.shape[1]
-    paddinghead = image[:,range(EPIWidth/2,0,-1),:]#左右颠倒
-    paddinghead = paddinghead[range(9-1,-1,-1),:,:] #上下颠倒
-    paddingtail = image[:,range(width-2,width-2-EPIWidth/2,-1),:]
-    paddingtail = paddingtail[range(9-1,-1,-1),:,:]
-    #在原图最左与最右 添加翻转过的内容作为边界填充 假设取9*16*3卷积 原图就变成9*(16/2+512+16/2)*3
-    image = np.column_stack((paddinghead,image,paddingtail))
+    if mode=='U':
+        paddinghead = image[:,range(EPIWidth/2,0,-1),:]#左右颠倒
+        paddinghead = paddinghead[range(height-1,-1,-1),:,:] #上下颠倒
+        paddingtail = image[:,range(width-2,width-2-EPIWidth/2,-1),:]
+        paddingtail = paddingtail[range(height-1,-1,-1),:,:]
 
-#    mean = np.mean(np.mean(image, 0), 0)
-#    image = image - mean
+        image = np.column_stack((paddinghead,image,paddingtail))
+        subEPI = [image[:,i:i+EPIWidth,:] for i in range(0,width)]
+    elif mode=='V':
+        paddinghead = image[range(EPIWidth/2,0,-1),:,:]#上下颠倒
+        paddinghead = paddinghead[:,range(width-1,-1,-1),:]#左右颠倒
+        paddingtail = image[range(height-2,height-2-EPIWidth/2,-1),:,:]
+        paddingtail = paddingtail[:,range(width-1,-1,-1),:]
 
-    subEPI = [image[:,i:i+EPIWidth,:] for i in range(0,width)]
+        image = np.row_stack((paddinghead,image,paddingtail))
+        subEPI = [image[i:i+EPIWidth,:,:] for i in range(0,height)]
+
     return subEPI
+
+
+def PatchGenerator(folder,EPIWidth,mode):
+    dir = folder+'/EPI-u' if mode=='U' else folder+'/EPI-v'
+    files = []
+    datalist = []
+    if not os.path.exists(dir):
+        print ('Error EPI not exist!')
+        exit(1)
+    filelist = os.listdir(dir)
+    for f in filelist:
+        if os.path.isfile(dir + '/' + f):
+            filename = dir + '/' + f
+            if filename.find('.png') != -1:
+                files.append(filename)
+    files.sort()
+    for png_path in files:
+        with open(png_path) as f:
+            im = Image.open(f)
+            subEPI = EPIextractor(np.array(im), EPIWidth, mode)
+            datalist.append(subEPI)
+    datas = np.array(datalist)
+#    datas = datas.reshape([datas.shape[0] * datas.shape[1], datas.shape[2], datas.shape[3], datas.shape[4]])
+    name = folder+'/Patch_U.npy' if mode=='U' else folder+'/Patch_V.npy'
+    np.save(name,datas)
 
 
 '''fang'''

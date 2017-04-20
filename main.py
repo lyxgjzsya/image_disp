@@ -3,6 +3,7 @@ import time
 import tensorflow as tf
 import network
 import dataset
+import numpy as np
 
 
 EPIWidth = 33
@@ -115,4 +116,6 @@ def main():
 
 if __name__ == '__main__':
     main()
+
+
 

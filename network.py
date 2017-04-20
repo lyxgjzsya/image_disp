@@ -47,7 +47,7 @@ def training(loss, learning_rate, global_step):
 
 #    num_batches_per_epoch = 200000/50
 #    decay_step = int(num_batches_per_epoch*10)
-    lr = tf.train.exponential_decay(learning_rate,global_step,10000,0.5,staircase=True)
+    lr = tf.train.exponential_decay(learning_rate,global_step,10000,0.9,staircase=True)
 
     optimizer = tf.train.AdamOptimizer(lr)
 #    optimizer = tf.train.MomentumOptimizer(lr,0.9)
@@ -98,7 +98,7 @@ def inference_test(image_pl,prop, EPIWidth, disp_precision):
      local test
     '''
     output_size = int(4 / disp_precision) + 1
-    tf.summary.image('input',image_pl)
+
     input=tf.reshape(image_pl,[-1,9*33*3])
 
     with tf.name_scope('hidden1'):

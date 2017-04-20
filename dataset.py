@@ -25,7 +25,7 @@ class Dataset(object):
             self._index_of_image = 0
 
         self._labels = io.read_disp(self._Path.disp[self._index_of_image])
-        images = io.read_data(self._Path.data[self._index_of_image],self._EPIWidth)
+        images = io.read_data(self._Path.data[self._index_of_image],self._EPIWidth,UV_Plus=True)
         self._images = io.preprocess(images)
 
         if self._type == 'train':
