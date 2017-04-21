@@ -24,14 +24,26 @@ class Dataset(object):
         if self._index_of_image == self._num_of_path:
             self._index_of_image = 0
 
-        self._labels = io.read_disp(self._Path.disp[self._index_of_image])
+        labels = io.read_disp(self._Path.disp[self._index_of_image])
         images = io.read_data(self._Path.data[self._index_of_image],self._EPIWidth,UV_Plus=True)
-        self._images = io.preprocess(images)
-
         if self._type == 'train':
-            self._images, self._labels = shuffle(self._images, self._labels)
+            images, labels = shuffle(images, labels)
         self._index_in_epoch = 0
-        self._num_examples = self._images.shape[0]
+        self._num_examples = images.shape[0]
+
+#        self._images = io.preprocess(images)
+#        self._labels = labels
+        shape = images.shape
+        images = images.reshape([shape[0]*shape[1]*shape[2],shape[3]])
+        u, v = np.hsplit(images,2)
+        u=u.reshape([shape[0],shape[1],shape[2],shape[3]/2])
+        v=v.reshape([shape[0],shape[1],shape[2],shape[3]/2])
+        u = io.preprocess(u)
+        v = io.preprocess(v)
+
+        self._labels = labels
+        self._u = u
+        self._v = v
 
 
     def next_batch(self,batch_size=1):
@@ -44,16 +56,17 @@ class Dataset(object):
             self._index_in_epoch = batch_size
             assert batch_size <= self._num_examples
         end = self._index_in_epoch
-        return self._images[start:end], self._labels[start:end]
+#        return self._images[start:end], self._labels[start:end]
+        return self._u[start:end], self._v[start:end], self._labels[start:end]
 
 
     def set_index_of_image(self,index):
         self._index_of_image=index
 
 
-    @property
-    def images(self):
-        return self._images
+#    @property
+#    def images(self):
+#        return self._images
 
     @property
     def labels(self):

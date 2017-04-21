@@ -3,35 +3,46 @@ import tensorflow as tf
 import math
 
 
-# 测试用小型网络
-def inference(image_pl,prop, EPIWidth, disp_precision):
+def inference_v2(input_u,input_v,prop_u,prop_v,EPIWidth,disp_precision):
     output_size = int(4 / disp_precision) + 1
-
-    hidden1 = conv2d(image_pl,[3,3,6,64],'Convolution_1')
-    pool1 = pool(hidden1,[1,1,2,1],[1,1,2,1],'Max_Pooling_1')
-#    norm1 = tf.nn.lrn(pool1,4,bias=1.0,alpha=1e-3/9.0,beta=0.75,name='norm1')
-
-    hidden2 = conv2d(pool1,[3,3,64,128],'Convolution_2')
-#    norm2 = tf.nn.lrn(hidden2,4,bias=1.0,alpha=1e-3/9.0,beta=0.75,name='norm2')
-    pool2 = pool(hidden2,[1,1,2,1],[1,1,2,1],'Max_Pooling_2')
-
-    pool2_shape = pool2.get_shape()
-    fc1_input_size = int(pool2_shape[1] * pool2_shape[2] * pool2_shape[3])
-    pool2_resize = tf.reshape(pool2, [-1, fc1_input_size])
-
-    hidden3 = fc(pool2_resize,fc1_input_size,1024,'FullyConnection_1',wd=0.004)
-    hidden3_drop = tf.nn.dropout(hidden3,prop)
-
-    output = fc(hidden3_drop,1024,output_size,'FullyConnection_2')
-
-    print 'image:', image_pl.get_shape()
-    print 'a_conv1:', hidden1.get_shape()
-    print 'pool2', pool1.get_shape()
-    print 'a_conv2', hidden2.get_shape()
-    print 'a_fc1', pool2.get_shape()
-    print 'a_fc2', hidden3.get_shape()
+    u_net = inference(input_u,prop_u,EPIWidth,disp_precision,'u-net')
+    v_net = inference(input_v,prop_v,EPIWidth,disp_precision,'v-net')
+    concat = tf.concat([u_net,v_net],1)
+    output = fc(concat, 1024, output_size, 'FullyConnection_2')
 
     return output
+
+
+# 测试用小型网络
+def inference(image_pl,prop, EPIWidth, disp_precision,net_name):
+    with tf.name_scope(net_name):
+        output_size = int(4 / disp_precision) + 1
+
+        hidden1 = conv2d(image_pl,[3,3,3,64],'Convolution_1')
+        pool1 = pool(hidden1,[1,1,2,1],[1,1,2,1],'Max_Pooling_1')
+    #    norm1 = tf.nn.lrn(pool1,4,bias=1.0,alpha=1e-3/9.0,beta=0.75,name='norm1')
+
+        hidden2 = conv2d(pool1,[3,3,64,128],'Convolution_2')
+    #    norm2 = tf.nn.lrn(hidden2,4,bias=1.0,alpha=1e-3/9.0,beta=0.75,name='norm2')
+        pool2 = pool(hidden2,[1,1,2,1],[1,1,2,1],'Max_Pooling_2')
+
+        pool2_shape = pool2.get_shape()
+        fc1_input_size = int(pool2_shape[1] * pool2_shape[2] * pool2_shape[3])
+        pool2_resize = tf.reshape(pool2, [-1, fc1_input_size])
+
+        hidden3 = fc(pool2_resize,fc1_input_size,512,'FullyConnection_1',wd=0.004)
+        hidden3_drop = tf.nn.dropout(hidden3,prop)
+
+#        output = fc(hidden3_drop,1024,output_size,'FullyConnection_2')
+
+#    print 'image:', image_pl.get_shape()
+#    print 'a_conv1:', hidden1.get_shape()
+#    print 'pool2', pool1.get_shape()
+#    print 'a_conv2', hidden2.get_shape()
+#    print 'a_fc1', pool2.get_shape()
+#    print 'a_fc2', hidden3.get_shape()
+
+    return hidden3_drop
 
 
 def loss(logits, labels):
@@ -93,17 +104,17 @@ def fc(input_tensor, input_size, output_size, layer_name, act=tf.nn.relu, wd=0.0
         return activations
 
 
-def inference_test(image_pl,prop, EPIWidth, disp_precision):
+def inference_test(image_pl,prop, EPIWidth, disp_precision,net_name):
     '''
      local test
     '''
     output_size = int(4 / disp_precision) + 1
 
-    input=tf.reshape(image_pl,[-1,9*33*6])
+    input=tf.reshape(image_pl,[-1,9*33*3])
 
     with tf.name_scope('hidden1'):
         weights = tf.Variable(
-            tf.truncated_normal([891*2, 256],
+            tf.truncated_normal([891, 256],
                                 stddev=1.0 / math.sqrt(float(891))),
             name='weights')
         biases = tf.Variable(tf.zeros([256]),

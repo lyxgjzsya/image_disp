@@ -80,7 +80,7 @@ def preprocess(image):
     return image
 
 
-'''--------------以下辅助函数-----------------------'''
+'''-------------------------以下辅助函数-----------------------'''
 def reduce_mean(image):
     mean = np.mean(np.mean(image,0),0)
     image = image - mean
