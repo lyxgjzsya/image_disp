@@ -4,7 +4,10 @@ import os
 from PIL import Image
 
 def read_disp(dir):
-    disp_list = []  # 512*512
+    '''
+    :return size:512*512
+    '''
+    disp_list = []
     with open(dir, 'r') as f:
         for line in f.readlines():
             line = line.strip()
@@ -18,6 +21,9 @@ def read_disp(dir):
 
 
 def read_data(dir,EPIWidth,UV_Plus=False):
+    '''
+    return size:[512*512,EPIh,EPIw,channel]
+    '''
     EPI_u_path = dir + '/Patch_U.npy'
     if not os.path.exists(EPI_u_path):
         PatchGenerator(dir,EPIWidth,'U')
@@ -37,13 +43,16 @@ def read_data(dir,EPIWidth,UV_Plus=False):
         EPI_v = EPI_v.reshape([shape[0]*shape[1]*shape[2]*shape[3],shape[4]])
         data = np.column_stack((EPI_u,EPI_v))
         data = data.reshape([shape[0],shape[1],shape[2],shape[3],shape[4]*2])
-#    data = EPI_v
+
     data = data.reshape([data.shape[0] * data.shape[1], data.shape[2], data.shape[3], data.shape[4]])
 
     return data
 
 
 def get_path_list(root,type):
+    '''
+    get data/label path
+    '''
     list_data = []
     list_disp = []
     if type == 'train':
@@ -68,7 +77,6 @@ def preprocess(image):
     count = image.shape[0]
     for i in xrange(count):
         image[i] = reduce_mean(image[i])
-        pass
     return image
 
 
@@ -79,7 +87,10 @@ def reduce_mean(image):
     return image
 
 
-def EPIextractor(image,EPIWidth,mode):
+def Patchextractor(image,EPIWidth,mode):
+    '''
+    convert one EPI to 512*Patch with padding
+    '''
     assert mode == 'U' or mode == 'V'
     height = image.shape[0]
     width = image.shape[1]
@@ -90,7 +101,7 @@ def EPIextractor(image,EPIWidth,mode):
         paddingtail = paddingtail[range(height-1,-1,-1),:,:]
 
         image = np.column_stack((paddinghead,image,paddingtail))
-        subEPI = [image[:,i:i+EPIWidth,:] for i in range(0,width)]
+        Patch = [image[:,i:i+EPIWidth,:] for i in range(0,width)]
     elif mode=='V':
         paddinghead = image[range(EPIWidth/2,0,-1),:,:]#上下颠倒
         paddinghead = paddinghead[:,range(width-1,-1,-1),:]#左右颠倒
@@ -98,34 +109,30 @@ def EPIextractor(image,EPIWidth,mode):
         paddingtail = paddingtail[:,range(width-1,-1,-1),:]
 
         image = np.row_stack((paddinghead,image,paddingtail))
-        subEPI = [image[i:i+EPIWidth,:,:] for i in range(0,height)]
+        Patch = [image[i:i+EPIWidth,:,:] for i in range(0,height)]
 
-    return subEPI
+    return Patch
 
 
 def PatchGenerator(folder,EPIWidth,mode):
+    '''
+    generate xxx.npy, size:[512,512,EPI_height,EPI_width,3]
+    '''
     dir = folder+'/EPI-u' if mode=='U' else folder+'/EPI-v'
-    files = []
-    datalist = []
+    Patchlist = []
     if not os.path.exists(dir):
         print ('Error EPI not exist!')
         exit(1)
-    filelist = os.listdir(dir)
-    for f in filelist:
-        if os.path.isfile(dir + '/' + f):
-            filename = dir + '/' + f
-            if filename.find('.png') != -1:
-                files.append(filename)
-    files.sort()
+    files = FileHelper.get_files(dir)
     for png_path in files:
         with open(png_path) as f:
             im = Image.open(f)
-            subEPI = EPIextractor(np.array(im), EPIWidth, mode)
-            datalist.append(subEPI)
-    datas = np.array(datalist)
-#    datas = datas.reshape([datas.shape[0] * datas.shape[1], datas.shape[2], datas.shape[3], datas.shape[4]])
+            Patch = Patchextractor(np.array(im), EPIWidth, mode)
+            Patchlist.append(Patch)
+    Patchset = np.array(Patchlist)
     name = folder+'/Patch_U.npy' if mode=='U' else folder+'/Patch_V.npy'
-    np.save(name,datas)
+    np.save(name,Patchset)
+    print name+' generated!'
 
 
 '''fang'''
