@@ -7,22 +7,20 @@ import math
 def inference(image_pl,prop, EPIWidth, disp_precision):
     output_size = int(4 / disp_precision) + 1
 
-    hidden1 = conv2d(image_pl,[3,3,6,64],'Convolution_1')
+    hidden1 = conv2d(image_pl,[3,3,3,64],'Convolution_1')
     pool1 = pool(hidden1,[1,1,2,1],[1,1,2,1],'Max_Pooling_1')
-#    norm1 = tf.nn.lrn(pool1,4,bias=1.0,alpha=1e-3/9.0,beta=0.75,name='norm1')
 
     hidden2 = conv2d(pool1,[3,3,64,128],'Convolution_2')
-#    norm2 = tf.nn.lrn(hidden2,4,bias=1.0,alpha=1e-3/9.0,beta=0.75,name='norm2')
     pool2 = pool(hidden2,[1,1,2,1],[1,1,2,1],'Max_Pooling_2')
 
     pool2_shape = pool2.get_shape()
     fc1_input_size = int(pool2_shape[1] * pool2_shape[2] * pool2_shape[3])
     pool2_resize = tf.reshape(pool2, [-1, fc1_input_size])
 
-    hidden3 = fc(pool2_resize,fc1_input_size,1024,'FullyConnection_1',wd=0.004)
+    hidden3 = fc(pool2_resize,fc1_input_size,512,'FullyConnection_1',wd=0.004)
     hidden3_drop = tf.nn.dropout(hidden3,prop)
 
-    output = fc(hidden3_drop,1024,output_size,'FullyConnection_2')
+    output = fc(hidden3_drop,512,output_size,'FullyConnection_2')
 
     print 'image:', image_pl.get_shape()
     print 'a_conv1:', hidden1.get_shape()
@@ -68,8 +66,30 @@ def conv2d(input_tensor, kernel_size, layer_name, act=tf.nn.relu):
             biases = tf.Variable(tf.constant(1e-2,shape=[kernel_size[3]]))
         with tf.name_scope('preactivate'):
             preactivate = tf.nn.conv2d(input_tensor,weights,[1, 1, 1, 1],padding='VALID')+biases
+
         activations = act(preactivate, name='activation')
         return activations
+
+
+def batch_norm(input,output_size,phase_train):
+    with tf.variable_scope('bn'):
+        beta = tf.Variable(tf.constant(0.0, shape=[output_size]),
+                           name='beta', trainable=True)
+        gamma = tf.Variable(tf.constant(1.0, shape=[output_size]),
+                            name='gamma', trainable=True)
+        batch_mean, batch_var = tf.nn.moments(input, [0, 1, 2], name='moments')
+        ema = tf.train.ExponentialMovingAverage(decay=0.5)
+
+        def mean_var_with_update():
+            ema_apply_op = ema.apply([batch_mean, batch_var])
+            with tf.control_dependencies([ema_apply_op]):
+                return tf.identity(batch_mean), tf.identity(batch_var)
+
+        mean, var = tf.cond(phase_train,
+                            mean_var_with_update,
+                            lambda: (ema.average(batch_mean), ema.average(batch_var)))
+        normed = tf.nn.batch_normalization(input, mean, var, beta, gamma, 1e-3)
+    return normed
 
 
 def pool(input_tensor, kernel_size, strides, layer_name):

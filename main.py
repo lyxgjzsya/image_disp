@@ -19,8 +19,10 @@ def trans(x):
     r = int((x+2)/disp_precision)
     return r
 
+
 def do_eval_true(sess, eval, images_pl, prop, data_set):
-    while data_set.index_of_image < 4:#data_set.num_of_path:
+    count = 0
+    while count < data_set.num_of_path:
         true_count = 0
         steps_per_epoch = data_set.num_examples // 2048
         num_example = steps_per_epoch * 2048
@@ -33,7 +35,7 @@ def do_eval_true(sess, eval, images_pl, prop, data_set):
                 true_count += abs(disp-label[i])<0.07
         precision = float(true_count) / num_example
         print ('example: %d, correct: %d, Precision: %0.04f' % (num_example, true_count, precision))
-    data_set.set_index_of_image(0)
+        count += 1
 
 
 def fill_feed_dict(data_sets, images_placeholder, labels_placeholder, prop_placeholder, mode='train'):
@@ -62,11 +64,11 @@ def main():
 
         global_step = tf.Variable(0, trainable=False)
 
-        images_placeholder = tf.placeholder(tf.float32, shape=(None, 9, EPIWidth, 3*2))
+        images_placeholder = tf.placeholder(tf.float32, shape=(None, 9, EPIWidth, 3))
         labels_placeholder = tf.placeholder(tf.int32, shape=None)
         prop_placeholder = tf.placeholder('float')
 
-        logits = network.inference_test(images_placeholder, prop_placeholder, EPIWidth, disp_precision)
+        logits = network.inference(images_placeholder, prop_placeholder, EPIWidth, disp_precision)
 
         loss = network.loss(logits, labels_placeholder)
 

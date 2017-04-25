@@ -20,16 +20,17 @@ def read_disp(dir):
     return disp
 
 
-def read_data(dir,EPIWidth,UV_Plus=False):
+def read_data(dir,EPIWidth,UV):
     '''
     return size:[512*512,EPIh,EPIw,channel]
     '''
-    EPI_u_path = dir + '/Patch_U.npy'
-    if not os.path.exists(EPI_u_path):
-        PatchGenerator(dir,EPIWidth,'U')
-    EPI_u = np.load(EPI_u_path)
-    data = EPI_u
-    if UV_Plus:
+    if UV == 'U':
+        EPI_u_path = dir + '/Patch_U.npy'
+        if not os.path.exists(EPI_u_path):
+            PatchGenerator(dir,EPIWidth,'U')
+        EPI_u = np.load(EPI_u_path)
+        data = EPI_u
+    elif UV == 'V':
         EPI_v_path = dir + '/Patch_V.npy'
         if not os.path.exists(EPI_v_path):
             PatchGenerator(dir,EPIWidth,'V')
@@ -37,12 +38,7 @@ def read_data(dir,EPIWidth,UV_Plus=False):
         #EPI_v对应的label要和u统一则需先转置
         EPI_v = np.transpose(EPI_v,(0,1,3,2,4))#h*w*EPIWidth*9*3 -> h*w*9*EPIWidth*3 针对卷积参数适应
         EPI_v = np.transpose(EPI_v,(1,0,2,3,4))#h*w*9*EPIWidth*3 -> w*h*9*EPIWidth*3 针对label对应
-        #通道合并
-        shape = EPI_u.shape
-        EPI_u = EPI_u.reshape([shape[0]*shape[1]*shape[2]*shape[3],shape[4]])
-        EPI_v = EPI_v.reshape([shape[0]*shape[1]*shape[2]*shape[3],shape[4]])
-        data = np.column_stack((EPI_u,EPI_v))
-        data = data.reshape([shape[0],shape[1],shape[2],shape[3],shape[4]*2])
+        data = EPI_v
 
     data = data.reshape([data.shape[0] * data.shape[1], data.shape[2], data.shape[3], data.shape[4]])
 
