@@ -2,8 +2,6 @@
 import numpy as np
 import data_preprocessor as io
 import collections
-import random
-import tensorflow as tf
 
 class Dataset(object):
 
@@ -24,14 +22,23 @@ class Dataset(object):
         if self._index_of_image == self._num_of_path:
             self._index_of_image = 0
 
-        self._labels = io.read_disp(self._Path.disp[self._index_of_image])
-        images = io.read_data(self._Path.data[self._index_of_image],self._EPIWidth,'U')
-        self._images = io.preprocess(images)
-
+        labels = io.read_disp(self._Path.disp[self._index_of_image])
+        image_u, image_v = io.read_data(self._Path.data[self._index_of_image],self._EPIWidth,UV_Plus=True)
         if self._type == 'train':
-            self._images, self._labels = shuffle(self._images, self._labels)
+            image_u, image_v, labels = shuffle(image_u, image_v, labels)
+        elif self._type == 'test':
+            print ('test data set:')
+            print (self._Path.data[self._index_of_image])
+            print (self._Path.disp[self._index_of_image])
         self._index_in_epoch = 0
-        self._num_examples = self._images.shape[0]
+        self._num_examples = image_u.shape[0]
+
+        image_u = io.preprocess(image_u)
+        image_v = io.preprocess(image_v)
+
+        self._labels = labels
+        self._u = image_u
+        self._v = image_v
 
 
     def next_batch(self,batch_size=1):
@@ -44,16 +51,12 @@ class Dataset(object):
             self._index_in_epoch = batch_size
             assert batch_size <= self._num_examples
         end = self._index_in_epoch
-        return self._images[start:end], self._labels[start:end]
+        return self._u[start:end], self._v[start:end], self._labels[start:end]
 
 
     def set_index_of_image(self,index):
         self._index_of_image=index
 
-
-    @property
-    def images(self):
-        return self._images
 
     @property
     def labels(self):
@@ -85,9 +88,9 @@ def get_datasets(dir,EPIWidth,disp_precision,type):
     return train_data
 
 
-def shuffle(data,disp):
-    assert data.shape[0]==disp.shape[0]
-    perm = np.arange(data.shape[0])
+def shuffle(data_u,data_v,disp):
+    assert data_u.shape[0]==disp.shape[0] and data_v.shape[0]==disp.shape[0]
+    perm = np.arange(data_u.shape[0])
     np.random.shuffle(perm)
 
-    return data[perm],disp[perm]
+    return data_u[perm],data_v[perm],disp[perm]

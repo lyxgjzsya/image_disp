@@ -20,29 +20,27 @@ def read_disp(dir):
     return disp
 
 
-def read_data(dir,EPIWidth,UV):
+def read_data(dir,EPIWidth,UV_Plus=False):
     '''
     return size:[512*512,EPIh,EPIw,channel]
     '''
-    if UV == 'U':
-        EPI_u_path = dir + '/Patch_U.npy'
-        if not os.path.exists(EPI_u_path):
-            PatchGenerator(dir,EPIWidth,'U')
-        EPI_u = np.load(EPI_u_path)
-        data = EPI_u
-    elif UV == 'V':
-        EPI_v_path = dir + '/Patch_V.npy'
-        if not os.path.exists(EPI_v_path):
-            PatchGenerator(dir,EPIWidth,'V')
-        EPI_v = np.load(EPI_v_path)
-        #EPI_v对应的label要和u统一则需先转置
-        EPI_v = np.transpose(EPI_v,(0,1,3,2,4))#h*w*EPIWidth*9*3 -> h*w*9*EPIWidth*3 针对卷积参数适应
-        EPI_v = np.transpose(EPI_v,(1,0,2,3,4))#h*w*9*EPIWidth*3 -> w*h*9*EPIWidth*3 针对label对应
-        data = EPI_v
+    EPI_u_path = dir + '/Patch_U.npy'
+    if not os.path.exists(EPI_u_path):
+        PatchGenerator(dir,EPIWidth,'U')
+    EPI_u = np.load(EPI_u_path)
 
-    data = data.reshape([data.shape[0] * data.shape[1], data.shape[2], data.shape[3], data.shape[4]])
-
-    return data
+    EPI_v_path = dir + '/Patch_V.npy'
+    if not os.path.exists(EPI_v_path):
+        PatchGenerator(dir,EPIWidth,'V')
+    EPI_v = np.load(EPI_v_path)
+    #EPI_v对应的label要和u统一则需先转置
+    EPI_v = np.transpose(EPI_v,(0,1,3,2,4))#h*w*EPIWidth*9*3 -> h*w*9*EPIWidth*3 针对卷积参数适应
+    EPI_v = np.transpose(EPI_v,(1,0,2,3,4))#h*w*9*EPIWidth*3 -> w*h*9*EPIWidth*3 针对label对应
+    #通道合并
+    shape = EPI_u.shape
+    EPI_u = EPI_u.reshape([shape[0]*shape[1],shape[2],shape[3],shape[4]])
+    EPI_v = EPI_v.reshape([shape[0]*shape[1],shape[2],shape[3],shape[4]])
+    return EPI_u, EPI_v
 
 
 def get_path_list(root,type):
@@ -73,10 +71,11 @@ def preprocess(image):
     count = image.shape[0]
     for i in xrange(count):
         image[i] = reduce_mean(image[i])
+        #add other preprocessors...
     return image
 
 
-'''--------------以下辅助函数-----------------------'''
+'''-------------------------以下辅助函数-----------------------'''
 def reduce_mean(image):
     mean = np.mean(np.mean(image,0),0)
     image = image - mean
