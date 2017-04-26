@@ -58,6 +58,11 @@ class Dataset(object):
         self._index_of_image=index
 
 
+    def get_data_name(self):
+        dir = self._Path.data[self._index_of_image]
+        return dir[dir.rfind('/')+1:]
+
+
     @property
     def labels(self):
         return self._labels
