@@ -4,6 +4,7 @@ import tensorflow as tf
 import network
 import dataset
 import numpy as np
+import scipy.io as sio
 
 
 EPIWidth = 33
@@ -15,18 +16,19 @@ summary_path = main_path+'/image_disp/summary'
 checkpoint_path = main_path+'/image_disp/checkpoint'
 disp_precision = 0.07
 
-def do_eval_true(sess, eval, images_u, image_v, prop, phase_train, data_set):
+def do_eval_true(sess, eval, logits, images_u, image_v, prop, phase_train, data_set):
     count = 0
     while count < data_set.num_of_path:
         true_count = 0
+        raw_output_mat = []
         output_txt = []
-        i = 0
         steps_per_epoch = data_set.num_examples // test_batch
         num_example = steps_per_epoch * test_batch
         for step in xrange(steps_per_epoch):
             labels_pl = tf.placeholder(tf.float32, shape=None)
             feed_dict = fill_feed_dict(data_set,images_u,image_v,labels_pl,prop,phase_train)
-            output, label = sess.run([eval, labels_pl],feed_dict=feed_dict)
+            raw_output, output, label = sess.run([logits, eval, labels_pl],feed_dict=feed_dict)
+            raw_output_mat.append(raw_output)
             for i in xrange(test_batch):
                 disp = (output[1][i]*disp_precision)-2+disp_precision/2
                 if disp>2:
@@ -36,9 +38,14 @@ def do_eval_true(sess, eval, images_u, image_v, prop, phase_train, data_set):
         precision = float(true_count) / num_example
         print ('example: %d, correct: %d, Precision: %0.04f' % (num_example, true_count, precision))
         count += 1
+        output_txt = np.array(output_txt)
         output_txt = output_txt.reshape([512,512])
+        raw_output_mat = np.array(raw_output_mat)
+        raw_output_mat = raw_output_mat.reshape([512,512,58])
         name = data_set.get_data_name()
         np.savetxt(main_path+'/image_disp/'+name+'.txt',output_txt,fmt='%.5f')
+        np.save(main_path+'/image_disp/'+name+'.npy',raw_output_mat)
+        sio.savemat(main_path+'/image_disp/'+name+'.mat',{'raw_output':raw_output_mat})
 
 
 def fill_feed_dict(data_sets, images_u_pl, image_v_pl, labels_placeholder, prop_placeholder,phase_train):
@@ -81,7 +88,7 @@ def main():
             print("no checkpoint found!")
 
         print('Training Data Eval:')
-        do_eval_true(sess,eval,images_placeholder_u,images_placeholder_v,prop_placeholder,phase_train,test_sets)
+        do_eval_true(sess,eval,logits,images_placeholder_u,images_placeholder_v,prop_placeholder,phase_train,test_sets)
 
 
 

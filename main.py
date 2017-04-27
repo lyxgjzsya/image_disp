@@ -3,6 +3,8 @@ import time
 import tensorflow as tf
 import network
 import dataset
+import numpy as np
+import scipy.io as sio
 
 
 EPIWidth = 33
@@ -102,7 +104,7 @@ def main():
 
         start_time = time.time()
 
-        for step in xrange(100000):
+        for step in xrange(50000):
 
             feed_dict = fill_feed_dict(train_sets, images_placeholder_u, images_placeholder_v, labels_placeholder, prop_placeholder,phase_train,'train')
             _, loss_value = sess.run([train_op, loss], feed_dict=feed_dict)
@@ -115,7 +117,7 @@ def main():
                 summary_writer.add_summary(summary_str, step)
                 summary_writer.flush()
 
-            if step % 50000 == 49999:
+            if step % 25000 == 24999:
                 saver.save(sess, checkpoint_path+'/model.ckpt',global_step=step)
                 print('Training Data Eval:')
                 do_eval_true(sess,eval,images_placeholder_u,images_placeholder_v,prop_placeholder,phase_train,test_sets)
@@ -123,7 +125,11 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+#    main()
+    a = np.arange(12)
+    a = a.reshape([2,2,3])
+    sio.savemat('test.mat',{'matrix':a})
+
     print 'done'
 
 

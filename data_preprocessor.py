@@ -70,16 +70,20 @@ def preprocess(image):
     image=image.astype(np.float32)
     count = image.shape[0]
     for i in xrange(count):
-        image[i] = reduce_mean(image[i])
+        image[i] = std_mean(image[i])
         #add other preprocessors...
     return image
 
 
 '''-------------------------以下辅助函数-----------------------'''
-def reduce_mean(image):
+def std_mean(image):
     mean = np.mean(np.mean(image,0),0)
-    image = image - mean
-    return image
+    tmp = image.reshape([image.shape[0]*image.shape[1],image.shape[2]])
+    std = np.std(tmp,0)
+#    aaa = (image - mean)
+#    bbb = aaa/std
+
+    return image-mean
 
 
 def Patchextractor(image,EPIWidth,mode):

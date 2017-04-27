@@ -48,7 +48,7 @@ def training(loss, learning_rate, global_step):
 
     #    num_batches_per_epoch = 200000/50
     #    decay_step = int(num_batches_per_epoch*10)
-    lr = tf.train.exponential_decay(learning_rate, global_step, 10000, 0.9, staircase=True)
+    lr = tf.train.exponential_decay(learning_rate, global_step, 10000, 0.2, staircase=True)
 
     optimizer = tf.train.AdamOptimizer(lr)
     #    optimizer = tf.train.MomentumOptimizer(lr,0.9)
