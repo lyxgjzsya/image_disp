@@ -7,7 +7,7 @@ import numpy as np
 import scipy.io as sio
 
 
-EPIWidth = 33
+EPIWidth = 9
 batch_size = 128
 test_batch = 2048
 main_path = '/home/luoyaox/Work'
@@ -21,10 +21,11 @@ def trans(x):
     r = int((x+2)/disp_precision)
     return r
 
-def do_eval_true(sess, eval, images_u, image_v, prop, phase_train, data_set):
+def do_eval_true(sess, eval, logits, images_u, image_v, prop, phase_train, data_set):
     count = 0
     while count < data_set.num_of_path:
         true_count = 0
+        output_txt = []
         steps_per_epoch = data_set.num_examples // test_batch
         num_example = steps_per_epoch * test_batch
         for step in xrange(steps_per_epoch):
@@ -34,9 +35,14 @@ def do_eval_true(sess, eval, images_u, image_v, prop, phase_train, data_set):
             for i in xrange(test_batch):
                 disp = (output[1][i]*disp_precision)-2+disp_precision/2
                 true_count += abs(disp-label[i])<0.07
+                output_txt.append(disp)
         precision = float(true_count) / num_example
         print ('example: %d, correct: %d, Precision: %0.04f' % (num_example, true_count, precision))
         count += 1
+        output_txt = np.array(output_txt)
+        output_txt = output_txt.reshape([512, 512])
+        name = data_set.get_data_name()
+        np.savetxt(main_path + '/image_disp/' + name + '.txt', output_txt, fmt='%.5f')
 
 
 def fill_feed_dict(data_sets, images_u_pl, image_v_pl, labels_placeholder, prop_placeholder,phase_train, mode='train'):
@@ -70,8 +76,8 @@ def main():
 
         global_step = tf.Variable(0, trainable=False)
 
-        images_placeholder_v = tf.placeholder(tf.float32, shape=(None, 9, EPIWidth, 3))
-        images_placeholder_u = tf.placeholder(tf.float32, shape=(None, 9, EPIWidth, 3))
+        images_placeholder_v = tf.placeholder(tf.float32, shape=(None, 9, EPIWidth, 1))
+        images_placeholder_u = tf.placeholder(tf.float32, shape=(None, 9, EPIWidth, 1))
         labels_placeholder = tf.placeholder(tf.int32, shape=None)
         prop_placeholder = tf.placeholder('float')
         phase_train = tf.placeholder(tf.bool,name='phase_train')
@@ -120,15 +126,12 @@ def main():
             if step % 25000 == 24999:
                 saver.save(sess, checkpoint_path+'/model.ckpt',global_step=step)
                 print('Training Data Eval:')
-                do_eval_true(sess,eval,images_placeholder_u,images_placeholder_v,prop_placeholder,phase_train,test_sets)
+                do_eval_true(sess,eval,logits,images_placeholder_u,images_placeholder_v,prop_placeholder,phase_train,test_sets)
 
 
 
 if __name__ == '__main__':
-#    main()
-    a = np.arange(12)
-    a = a.reshape([2,2,3])
-    sio.savemat('test.mat',{'matrix':a})
+    main()
 
     print 'done'
 

@@ -68,22 +68,30 @@ def get_path_list(root,type):
 
 def preprocess(image):
     image=image.astype(np.float32)
-    count = image.shape[0]
-    for i in xrange(count):
-        image[i] = std_mean(image[i])
+    shape = image.shape
+    result = []
+    for i in xrange(shape[0]):
+        tmp = image[i]
+        tmp = rgb2gray(image[i])
+        tmp = std_mean(tmp)
         #add other preprocessors...
-    return image
+        result.append(tmp)
+    result = np.array(result)
+    result = result.reshape([shape[0],shape[1],shape[2],1])
+    return result
 
 
 '''-------------------------以下辅助函数-----------------------'''
 def std_mean(image):
     mean = np.mean(np.mean(image,0),0)
-    tmp = image.reshape([image.shape[0]*image.shape[1],image.shape[2]])
-    std = np.std(tmp,0)
-#    aaa = (image - mean)
-#    bbb = aaa/std
+    std = np.std(image)#没做三通道，有可能std在某通道=0
+    result = image - mean
 
-    return image-mean
+    return result
+
+
+def rgb2gray(image):
+    return np.dot(image[...,:3],[0.299,0.587,0.144])
 
 
 def Patchextractor(image,EPIWidth,mode):

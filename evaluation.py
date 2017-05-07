@@ -7,7 +7,7 @@ import numpy as np
 import scipy.io as sio
 
 
-EPIWidth = 33
+EPIWidth = 9
 batch_size = 128
 test_batch = 2048
 main_path = '/home/luoyaox/Work'
@@ -20,7 +20,7 @@ def do_eval_true(sess, eval, logits, images_u, image_v, prop, phase_train, data_
     count = 0
     while count < data_set.num_of_path:
         true_count = 0
-        raw_output_mat = []
+#        raw_output_mat = []
         output_txt = []
         steps_per_epoch = data_set.num_examples // test_batch
         num_example = steps_per_epoch * test_batch
@@ -28,7 +28,7 @@ def do_eval_true(sess, eval, logits, images_u, image_v, prop, phase_train, data_
             labels_pl = tf.placeholder(tf.float32, shape=None)
             feed_dict = fill_feed_dict(data_set,images_u,image_v,labels_pl,prop,phase_train)
             raw_output, output, label = sess.run([logits, eval, labels_pl],feed_dict=feed_dict)
-            raw_output_mat.append(raw_output)
+#            raw_output_mat.append(raw_output)
             for i in xrange(test_batch):
                 disp = (output[1][i]*disp_precision)-2+disp_precision/2
                 if disp>2:
@@ -40,12 +40,12 @@ def do_eval_true(sess, eval, logits, images_u, image_v, prop, phase_train, data_
         count += 1
         output_txt = np.array(output_txt)
         output_txt = output_txt.reshape([512,512])
-        raw_output_mat = np.array(raw_output_mat)
-        raw_output_mat = raw_output_mat.reshape([512,512,58])
+#        raw_output_mat = np.array(raw_output_mat)
+#        raw_output_mat = raw_output_mat.reshape([512,512,58])
         name = data_set.get_data_name()
         np.savetxt(main_path+'/image_disp/'+name+'.txt',output_txt,fmt='%.5f')
-        np.save(main_path+'/image_disp/'+name+'.npy',raw_output_mat)
-        sio.savemat(main_path+'/image_disp/'+name+'.mat',{'raw_output':raw_output_mat})
+#        np.save(main_path+'/image_disp/'+name+'.npy',raw_output_mat)
+#        sio.savemat(main_path+'/image_disp/'+name+'.mat',{'raw_output':raw_output_mat})
 
 
 def fill_feed_dict(data_sets, images_u_pl, image_v_pl, labels_placeholder, prop_placeholder,phase_train):
@@ -94,8 +94,11 @@ def main():
 
 if __name__ == '__main__':
     main()
-    str = 'abc/def'
-    str = str[str.find('/')+1:]
+#    str = 'abc/def'
+#    str = str[str.find('/')+1:]
+#    EPI_u = np.load('/home/luoyaox/Work/Patch_U.npy')
+#    EPI_u = EPI_u.reshape([512*512,9,9,3])
+#    sio.savemat('/home/luoyaox/Work/Patch_U.mat',{'patch_gray':EPI_u})
     print str
 
 

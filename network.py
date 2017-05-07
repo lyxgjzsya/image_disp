@@ -15,16 +15,16 @@ def inference_ds(input_u, input_v, prop, phase, EPIWidth, disp_precision):
 
 def inference(image_pl, prop, phase, EPIWidth, disp_precision, net_name):
     with tf.name_scope(net_name):
-        hidden1 = conv2d(image_pl, [2, 5, 3, 32], 'Convolution_1', phase, BN=True)
-        hidden1_1 = conv2d(hidden1, [2, 5, 32, 64], 'Convolution_1_1', phase, BN=True)
+        hidden1 = conv2d(image_pl, [2, 2, 1, 32], 'Convolution_1', phase, BN=True)
+        hidden1_1 = conv2d(hidden1, [2, 2, 32, 64], 'Convolution_1_1', phase, BN=True)
         hidden1_2 = conv2d(hidden1_1, [2, 2, 64, 128], 'Convolution_1_2', phase, BN=True)
-        pool1 = pool(hidden1_2, [1, 1, 2, 1], [1, 1, 2, 1], 'Max_Pooling_1')
+#        pool1 = pool(hidden1_2, [1, 1, 2, 1], [1, 1, 2, 1], 'Max_Pooling_1')
 
-        hidden2 = conv2d(pool1, [2, 2, 128, 256], 'Convolution_2', phase, BN=True)
+        hidden2 = conv2d(hidden1_2, [2, 2, 128, 256], 'Convolution_2', phase, BN=True)
         hidden2_1 = conv2d(hidden2, [2, 2, 256, 512], 'Convolution_2_1', phase, BN=True)
         hidden2_2 = conv2d(hidden2_1, [2, 2, 512, 1024], 'Convolution_2_2', phase, BN=True)
-        pool2 = pool(hidden2_2, [1, 1, 2, 1], [1, 1, 2, 1], 'Max_Pooling_2')
-
+#        pool2 = pool(hidden2_2, [1, 1, 2, 1], [1, 1, 2, 1], 'Max_Pooling_2')
+        pool2 = hidden2_2
         pool2_shape = pool2.get_shape()
         fc1_input_size = int(pool2_shape[1] * pool2_shape[2] * pool2_shape[3])
         pool2_resize = tf.reshape(pool2, [-1, fc1_input_size])
