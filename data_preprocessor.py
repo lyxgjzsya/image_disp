@@ -3,10 +3,11 @@ import numpy as np
 import os
 from PIL import Image
 
+
 def read_disp(dir):
-    '''
+    """
     :return size:512*512
-    '''
+    """
     disp_list = []
     with open(dir, 'r') as f:
         for line in f.readlines():
@@ -21,9 +22,9 @@ def read_disp(dir):
 
 
 def read_data(dir,EPIWidth,UV_Plus=False):
-    '''
+    """
     return size:[512*512,EPIh,EPIw,channel]
-    '''
+    """
     EPI_u_path = dir + '/Patch_U.npy'
     if not os.path.exists(EPI_u_path):
         PatchGenerator(dir,EPIWidth,'U')
@@ -44,9 +45,9 @@ def read_data(dir,EPIWidth,UV_Plus=False):
 
 
 def get_path_list(root,type):
-    '''
+    """
     get data/label path
-    '''
+    """
     list_data = []
     list_disp = []
     if type == 'train':
@@ -66,28 +67,49 @@ def get_path_list(root,type):
     return list_data,list_disp
 
 
-def preprocess(image):
+def preprocess(image,type):
     image=image.astype(np.float32)
     shape = image.shape
     result = []
     for i in xrange(shape[0]):
         tmp = image[i]
-        tmp = rgb2gray(image[i])
-        tmp = std_mean(tmp)
+#        tmp = rgb2gray(image[i])
+        tmp = sub_mean(tmp)
         #add other preprocessors...
         result.append(tmp)
     result = np.array(result)
-    result = result.reshape([shape[0],shape[1],shape[2],1])
+#    result = result.reshape([shape[0],shape[1],shape[2],1])
     return result
 
 
-'''-------------------------以下辅助函数-----------------------'''
-def std_mean(image):
+def train_filter(image_u,image_v,labels):
+    shape = image_u.shape
+    u = []
+    v = []
+    l = []
+    for i in xrange(shape[0]):
+        tmp_u = std(image_u[i])
+        tmp_v = std(image_v[i])
+        if tmp_u[0]!=0 and tmp_v[0]!=0 and tmp_v[1]!=0 and tmp_v[1]!=0 and tmp_u[1] and tmp_u[2]:
+            u.append(image_u[i])
+            v.append(image_v[i])
+            l.append(labels[i])
+    u = np.array(u)
+    v = np.array(v)
+    l = np.array(l)
+    return u,v,l
+
+"""-------------------------以下辅助函数-----------------------"""
+def sub_mean(image):
     mean = np.mean(np.mean(image,0),0)
-    std = np.std(image)#没做三通道，有可能std在某通道=0
     result = image - mean
-
     return result
+
+
+def std(image):
+    tmp = image.reshape([81,3])
+    std = np.std(tmp,0)
+    return std
 
 
 def rgb2gray(image):
@@ -95,9 +117,9 @@ def rgb2gray(image):
 
 
 def Patchextractor(image,EPIWidth,mode):
-    '''
+    """
     convert one EPI to 512*Patch with padding
-    '''
+    """
     assert mode == 'U' or mode == 'V'
     height = image.shape[0]
     width = image.shape[1]
@@ -122,9 +144,9 @@ def Patchextractor(image,EPIWidth,mode):
 
 
 def PatchGenerator(folder,EPIWidth,mode):
-    '''
+    """
     generate xxx.npy, size:[512,512,EPI_height,EPI_width,3]
-    '''
+    """
     dir = folder+'/EPI-u' if mode=='U' else folder+'/EPI-v'
     Patchlist = []
     if not os.path.exists(dir):
@@ -142,18 +164,18 @@ def PatchGenerator(folder,EPIWidth,mode):
     print name+' generated!'
 
 
-'''fang'''
+
 class FileHelper(object):
-    '''
+    """
     class to help deal with folder and File
-    '''
+    """
     @classmethod
     def get_files(cls, folder, suffix='.png'):
-        '''
+        """
         function:to get all files in the current folder\n
         return: tuple\n
         @suffix:file's suffix
-        '''
+        """
         files = []
         filelist = os.listdir(folder)
         for f in filelist:
@@ -165,20 +187,20 @@ class FileHelper(object):
         return tuple(files)#返回tuple类型
 
 class EPIcreator(object):
-    '''
+    """
     class to create origin epi file
-    '''
+    """
     def __init__(self, files):
         self.files = files
         self.file_num = len(self.files)
 
     def create(self, block, folder=None):
-        '''
+        """
         function to create origin epi file\n
         @block:图像索引闭区间\n
         @folder:to place the epi files generated\n
         default is the folder of origin images in files
-        '''
+        """
         if not isinstance(block, tuple):
             raise TypeError("block should be tuple-type")
         if len(block) != 2 and block[0]<block[1]:
@@ -215,3 +237,17 @@ class EPIcreator(object):
             epi_image.save(epi_folder+epi_file_prefix+'{:0>3}'.format(h)+png_suffix)
             print 'epi'+'{:0>3}'.format(h)+' generate'
         print 'done!'
+
+def extract_error_data(name):
+    patch = np.load('/home/luoyaox/Work/lightfield/full_data/additional/' + name + '/Patch_U.npy')
+    error = read_disp('/home/luoyaox/Work/lightfield/error_analyse/' + name + '_error.txt')
+    error = error.reshape([512, 512])
+    for i in xrange(512):
+        for j in xrange(512):
+            if error[i][j] > 4:
+                im = Image.fromarray(np.uint8(patch[i][j]))
+                dir = '/home/luoyaox/Work/lightfield/error_analyse/' + name + '/'
+                filename = dir + '{:0>3}'.format(i) + '_' + '{:0>3}'.format(j) + '_' + '{:0>2}'.format(
+                    error[i][j]) + '.png'
+                im.save(filename)
+

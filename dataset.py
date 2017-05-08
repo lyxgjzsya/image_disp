@@ -24,19 +24,21 @@ class Dataset(object):
 
         labels = io.read_disp(self._Path.disp[self._index_of_image])
         image_u, image_v = io.read_data(self._Path.data[self._index_of_image],self._EPIWidth,UV_Plus=True)
+
         if self._type == 'train':
             print ('train data set:')
             print (self.get_data_name())
+            image_u, image_v, labels = io.train_filter(image_u, image_v, labels)
             image_u, image_v, labels = shuffle(image_u, image_v, labels)
         elif self._type == 'test':
             print ('test data set:')
             print (self.get_data_name())
+
+        image_u = io.preprocess(image_u,self._type)
+        image_v = io.preprocess(image_v,self._type)
+
         self._index_in_epoch = 0
         self._num_examples = image_u.shape[0]
-
-        image_u = io.preprocess(image_u)
-        image_v = io.preprocess(image_v)
-
         self._labels = labels
         self._u = image_u
         self._v = image_v

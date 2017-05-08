@@ -15,7 +15,7 @@ def inference_ds(input_u, input_v, prop, phase, EPIWidth, disp_precision):
 
 def inference(image_pl, prop, phase, EPIWidth, disp_precision, net_name):
     with tf.name_scope(net_name):
-        hidden1 = conv2d(image_pl, [2, 2, 1, 32], 'Convolution_1', phase, BN=True)
+        hidden1 = conv2d(image_pl, [2, 2, 3, 32], 'Convolution_1', phase, BN=True)
         hidden1_1 = conv2d(hidden1, [2, 2, 32, 64], 'Convolution_1_1', phase, BN=True)
         hidden1_2 = conv2d(hidden1_1, [2, 2, 64, 128], 'Convolution_1_2', phase, BN=True)
 #        pool1 = pool(hidden1_2, [1, 1, 2, 1], [1, 1, 2, 1], 'Max_Pooling_1')
@@ -46,9 +46,7 @@ def training(loss, learning_rate, global_step):
     #    optimizer = tf.train.GradientDescentOptimizer(learning_rate)
     tf.summary.scalar('loss', loss)
 
-    #    num_batches_per_epoch = 200000/50
-    #    decay_step = int(num_batches_per_epoch*10)
-    lr = tf.train.exponential_decay(learning_rate, global_step, 10000, 0.2, staircase=True)
+    lr = tf.train.exponential_decay(learning_rate, global_step, 8000, 0.1, staircase=True)
 
     optimizer = tf.train.AdamOptimizer(lr)
     #    optimizer = tf.train.MomentumOptimizer(lr,0.9)

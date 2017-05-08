@@ -10,13 +10,13 @@ import scipy.io as sio
 EPIWidth = 9
 batch_size = 128
 test_batch = 2048
-main_path = '/home/luoyaox/Work'
+main_path = '/home/luoyaox/Work/lightfield'
 #main_path = '/home/cs505/workspace/luo_space'
 summary_path = main_path+'/image_disp/summary'
 checkpoint_path = main_path+'/image_disp/checkpoint'
 disp_precision = 0.07
 
-def do_eval_true(sess, eval, logits, images_u, image_v, prop, phase_train, data_set):
+def do_eval_true(sess, eval, logits, images_u, images_v, prop, phase_train, data_set):
     count = 0
     while count < data_set.num_of_path:
         true_count = 0
@@ -26,7 +26,7 @@ def do_eval_true(sess, eval, logits, images_u, image_v, prop, phase_train, data_
         num_example = steps_per_epoch * test_batch
         for step in xrange(steps_per_epoch):
             labels_pl = tf.placeholder(tf.float32, shape=None)
-            feed_dict = fill_feed_dict(data_set,images_u,image_v,labels_pl,prop,phase_train)
+            feed_dict = fill_feed_dict(data_set,images_u,images_v,labels_pl,prop,phase_train)
             raw_output, output, label = sess.run([logits, eval, labels_pl],feed_dict=feed_dict)
 #            raw_output_mat.append(raw_output)
             for i in xrange(test_batch):
@@ -48,11 +48,11 @@ def do_eval_true(sess, eval, logits, images_u, image_v, prop, phase_train, data_
 #        sio.savemat(main_path+'/image_disp/'+name+'.mat',{'raw_output':raw_output_mat})
 
 
-def fill_feed_dict(data_sets, images_u_pl, image_v_pl, labels_placeholder, prop_placeholder,phase_train):
+def fill_feed_dict(data_sets, images_u_pl, images_v_pl, labels_placeholder, prop_placeholder,phase_train):
     images_u, images_v, labels = data_sets.next_batch(test_batch)
     feed_dict = {
         images_u_pl: images_u,
-        image_v_pl: images_v,
+        images_v_pl: images_v,
         labels_placeholder: labels,
         prop_placeholder:1.0,
         phase_train:False,
@@ -64,8 +64,8 @@ def main():
     with tf.Graph().as_default():
         test_sets = dataset.get_datasets(main_path, EPIWidth, disp_precision, 'test')
 
-        images_placeholder_v = tf.placeholder(tf.float32, shape=(None, 9, EPIWidth, 3))
-        images_placeholder_u = tf.placeholder(tf.float32, shape=(None, 9, EPIWidth, 3))
+        images_placeholder_v = tf.placeholder(tf.float32, shape=(None, 9, EPIWidth, 1))
+        images_placeholder_u = tf.placeholder(tf.float32, shape=(None, 9, EPIWidth, 1))
         prop_placeholder = tf.placeholder('float')
         phase_train = tf.placeholder(tf.bool,name='phase_train')
 
