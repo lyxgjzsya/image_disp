@@ -25,13 +25,15 @@ def do_eval_true(sess, eval, logits, images_u, images_v, prop, phase_train, data
     count = 0
     while count < data_set.num_of_path:
         true_count = 0
+        raw_output_mat = []
         output_txt = []
         steps_per_epoch = data_set.num_examples // test_batch
         num_example = steps_per_epoch * test_batch
         for step in xrange(steps_per_epoch):
             labels_pl = tf.placeholder(tf.float32, shape=None)
             feed_dict = fill_feed_dict(data_set,images_u,images_v,labels_pl,prop,phase_train,'test')
-            output, label = sess.run([eval, labels_pl],feed_dict=feed_dict)
+            raw_output, output, label = sess.run([logits, eval, labels_pl],feed_dict=feed_dict)
+            raw_output_mat.append(raw_output)
             for i in xrange(test_batch):
                 disp = (output[1][i]*disp_precision)-2+disp_precision/2
                 true_count += abs(disp-label[i])<0.07
@@ -42,7 +44,10 @@ def do_eval_true(sess, eval, logits, images_u, images_v, prop, phase_train, data
         output_txt = np.array(output_txt)
         output_txt = output_txt.reshape([512, 512])
         name = data_set.get_data_name()
-        np.savetxt(main_path + '/image_disp/' + name + '.txt', output_txt, fmt='%.5f')
+        np.savetxt(main_path + '/image_disp/output/' + name + '.txt', output_txt, fmt='%.5f')
+        raw_output_mat = np.array(raw_output_mat)
+        raw_output_mat = raw_output_mat.reshape([512,512,58])
+        sio.savemat(main_path + '/image_disp/output/' + name + '.mat', {'raw_output': raw_output_mat})
 
 
 def fill_feed_dict(data_sets, images_u_pl, images_v_pl, labels_placeholder, prop_placeholder,phase_train, mode='train'):
@@ -76,8 +81,8 @@ def main():
 
         global_step = tf.Variable(0, trainable=False)
 
-        images_placeholder_v = tf.placeholder(tf.float32, shape=(None, 9, EPIWidth, 3))
-        images_placeholder_u = tf.placeholder(tf.float32, shape=(None, 9, EPIWidth, 3))
+        images_placeholder_v = tf.placeholder(tf.float32, shape=(None, 9, EPIWidth, 1))
+        images_placeholder_u = tf.placeholder(tf.float32, shape=(None, 9, EPIWidth, 1))
         labels_placeholder = tf.placeholder(tf.int32, shape=None)
         prop_placeholder = tf.placeholder('float')
         phase_train = tf.placeholder(tf.bool,name='phase_train')
@@ -123,7 +128,7 @@ def main():
                 summary_writer.add_summary(summary_str, step)
                 summary_writer.flush()
 
-            if step % 25000 == 24999:
+            if step % 12500 == 12499:
                 saver.save(sess, checkpoint_path+'/model.ckpt',global_step=step)
                 print('Training Data Eval:')
                 do_eval_true(sess,eval,logits,images_placeholder_u,images_placeholder_v,prop_placeholder,phase_train,test_sets)

@@ -2,7 +2,7 @@
 import numpy as np
 import os
 from PIL import Image
-
+import cv2
 
 def read_disp(dir):
     """
@@ -73,31 +73,33 @@ def preprocess(image,type):
     result = []
     for i in xrange(shape[0]):
         tmp = image[i]
-#        tmp = rgb2gray(image[i])
+        tmp = rgb2gray(image[i])
         tmp = sub_mean(tmp)
         #add other preprocessors...
         result.append(tmp)
     result = np.array(result)
-#    result = result.reshape([shape[0],shape[1],shape[2],1])
+    result = result.reshape([shape[0],shape[1],shape[2],1])
     return result
 
 
-def train_filter(image_u,image_v,labels):
-    shape = image_u.shape
-    u = []
-    v = []
-    l = []
+def bad_patch_filter(u,v,l):
+    f_u = []
+    f_v = []
+    f_l = []
+    shape = u.shape
     for i in xrange(shape[0]):
-        tmp_u = std(image_u[i])
-        tmp_v = std(image_v[i])
-        if tmp_u[0]!=0 and tmp_v[0]!=0 and tmp_v[1]!=0 and tmp_v[1]!=0 and tmp_u[1] and tmp_u[2]:
-            u.append(image_u[i])
-            v.append(image_v[i])
-            l.append(labels[i])
-    u = np.array(u)
-    v = np.array(v)
-    l = np.array(l)
-    return u,v,l
+        tmp_u = u[i]
+        tmp_v = v[i]
+        tmp_u = cv2.Canny(tmp_u,15,15)
+        tmp_v = cv2.Canny(tmp_v,15,15)
+        if ana(tmp_u) and  ana(tmp_v):
+            f_u.append(u[i])
+            f_v.append(v[i])
+            f_l.append(l[i])
+    f_u = np.array(f_u)
+    f_v = np.array(f_v)
+    f_l = np.array(f_l)
+    return f_u,f_v,f_l
 
 """-------------------------以下辅助函数-----------------------"""
 def sub_mean(image):
@@ -113,7 +115,7 @@ def std(image):
 
 
 def rgb2gray(image):
-    return np.dot(image[...,:3],[0.299,0.587,0.144])
+    return np.dot(image[...,:3],[0.2989,0.5870,0.1140]).astype(np.uint8)
 
 
 def Patchextractor(image,EPIWidth,mode):
@@ -250,4 +252,32 @@ def extract_error_data(name):
                 filename = dir + '{:0>3}'.format(i) + '_' + '{:0>3}'.format(j) + '_' + '{:0>2}'.format(
                     error[i][j]) + '.png'
                 im.save(filename)
+
+def ana(img):
+    for i in range(2,7,1):
+        for j in range(2,7,1):
+            if(img[i][j]==255):
+                return True
+    return False
+
+
+if __name__=='__main__':
+
+    root = '/home/luoyaox/Work/lightfield/'
+    img = cv2.imread(root + 'full_data/additional/rosemary/input_Cam040.png',0)
+#    img = rgb2gray(img)
+    disp = read_disp(root + 'error_analyse/boardgames.txt')
+#    img = cv2.GaussianBlur(img,(3,3),0)
+    img = cv2.Canny(img,15,30)
+    cv2.imshow('origin',img)
+    cv2.waitKey(0)
+#    img_list = FileHelper.get_files('/home/luoyaox/Work/lightfield/error_analyse/rosemary')
+#    count = 0.0
+#    for path in img_list:
+#        img = cv2.imread(path,0)
+#        img = cv2.Canny(img,15,15)
+#        count+=ana(img)
+#    print count/img_list.__len__()
+
+
 
