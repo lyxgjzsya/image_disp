@@ -106,12 +106,12 @@ def main():
         sess.run(tf.global_variables_initializer())
 
         ckpt = tf.train.get_checkpoint_state(checkpoint_path)
-        if ckpt:
+#        if ckpt:
 #            saver.restore(sess,checkpoint_path+'/model.ckpt')#利用不同平台的训练结果
 #            saver.restore(sess,ckpt.model_checkpoint_path)#本地训练的结果
-            print ("restore from checkpoint!")
-        else:
-            print("no checkpoint found!")
+#            print ("restore from checkpoint!")
+#        else:
+#            print("no checkpoint found!")
 
         start_time = time.time()
 

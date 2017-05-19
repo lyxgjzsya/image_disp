@@ -264,11 +264,11 @@ def ana(img):
 if __name__=='__main__':
 
     root = '/home/luoyaox/Work/lightfield/'
-    img = cv2.imread(root + 'full_data/additional/rosemary/input_Cam040.png',0)
+    img = cv2.imread(root + 'full_data/additional/table/input_Cam040.png',0)
 #    img = rgb2gray(img)
     disp = read_disp(root + 'error_analyse/boardgames.txt')
 #    img = cv2.GaussianBlur(img,(3,3),0)
-    img = cv2.Canny(img,15,30)
+    img = cv2.Canny(img,15,15)
     cv2.imshow('origin',img)
     cv2.waitKey(0)
 #    img_list = FileHelper.get_files('/home/luoyaox/Work/lightfield/error_analyse/rosemary')

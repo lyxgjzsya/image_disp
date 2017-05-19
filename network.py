@@ -9,6 +9,7 @@ def inference_ds(input_u, input_v, prop, phase, EPIWidth, disp_precision):
     v_net = inference(input_v, prop, phase, EPIWidth, disp_precision, 'v-net')
     concat = tf.concat([u_net, v_net], 1)
     output = fc(concat, 1024, output_size, 'FullyConnection_2')
+    output = tf.nn.softmax(output)
 
     return output
 
@@ -37,7 +38,10 @@ def inference(image_pl, prop, phase, EPIWidth, disp_precision, net_name):
 
 def loss(logits, labels):
     #    labels = tf.to_int64(labels)
-    Loss = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(labels=labels, logits=logits))
+#    Loss = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(labels=labels, logits=logits))
+    one_hot_label = tf.one_hot(labels, 58)
+#    Loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(labels=one_hot_label, logits=logits))
+    Loss = -tf.reduce_mean(one_hot_label*tf.log(logits))
 
     return Loss
 
