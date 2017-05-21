@@ -10,8 +10,8 @@ import scipy.io as sio
 EPIWidth = 9
 batch_size = 128
 test_batch = 2048
-main_path = '/home/luoyaox/Work/lightfield'
-#main_path = '/home/cs505/workspace/luo_space'
+#main_path = '/home/luoyaox/Work/lightfield'
+main_path = '/home/cs505/workspace/luo_space'
 summary_path = main_path+'/image_disp/summary'
 checkpoint_path = main_path+'/image_disp/checkpoint'
 disp_precision = 0.07
@@ -20,7 +20,7 @@ def do_eval_true(sess, eval, logits, images_u, images_v, prop, phase_train, data
     count = 0
     while count < data_set.num_of_path:
         true_count = 0
-#        raw_output_mat = []
+        raw_output_mat = []
         output_txt = []
         steps_per_epoch = data_set.num_examples // test_batch
         num_example = steps_per_epoch * test_batch
@@ -28,7 +28,7 @@ def do_eval_true(sess, eval, logits, images_u, images_v, prop, phase_train, data
             labels_pl = tf.placeholder(tf.float32, shape=None)
             feed_dict = fill_feed_dict(data_set,images_u,images_v,labels_pl,prop,phase_train)
             raw_output, output, label = sess.run([logits, eval, labels_pl],feed_dict=feed_dict)
-#            raw_output_mat.append(raw_output)
+            raw_output_mat.append(raw_output)
             for i in xrange(test_batch):
                 disp = (output[1][i]*disp_precision)-2+disp_precision/2
                 if disp>2:
@@ -39,13 +39,12 @@ def do_eval_true(sess, eval, logits, images_u, images_v, prop, phase_train, data
         print ('example: %d, correct: %d, Precision: %0.04f' % (num_example, true_count, precision))
         count += 1
         output_txt = np.array(output_txt)
-        output_txt = output_txt.reshape([512,512])
-#        raw_output_mat = np.array(raw_output_mat)
-#        raw_output_mat = raw_output_mat.reshape([512,512,58])
+        output_txt = output_txt.reshape([512, 512])
         name = data_set.get_data_name()
-        np.savetxt(main_path+'/image_disp/'+name+'.txt',output_txt,fmt='%.5f')
-#        np.save(main_path+'/image_disp/'+name+'.npy',raw_output_mat)
-#        sio.savemat(main_path+'/image_disp/'+name+'.mat',{'raw_output':raw_output_mat})
+        np.savetxt(main_path + '/image_disp/output/' + name + '.txt', output_txt, fmt='%.5f')
+        raw_output_mat = np.array(raw_output_mat)
+        raw_output_mat = raw_output_mat.reshape([512, 512, 58])
+        sio.savemat(main_path + '/image_disp/output/' + name + '.mat', {'raw_output': raw_output_mat})
 
 
 def fill_feed_dict(data_sets, images_u_pl, images_v_pl, labels_placeholder, prop_placeholder,phase_train):
@@ -75,7 +74,9 @@ def main():
 
         saver = tf.train.Saver(tf.global_variables())
 
-        sess = tf.Session()
+        gpu_option = tf.GPUOptions(per_process_gpu_memory_fraction=0.333)
+
+        sess = tf.Session(config=tf.ConfigProto(gpu_options=gpu_option))
 
         sess.run(tf.global_variables_initializer())
 

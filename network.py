@@ -37,7 +37,6 @@ def inference(image_pl, prop, phase, EPIWidth, disp_precision, net_name):
 
 
 def loss(logits, labels):
-    #    labels = tf.to_int64(labels)
 #    Loss = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(labels=labels, logits=logits))
     one_hot_label = tf.one_hot(labels, 58)
 #    Loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(labels=one_hot_label, logits=logits))
@@ -47,15 +46,10 @@ def loss(logits, labels):
 
 
 def training(loss, learning_rate, global_step):
-    #    optimizer = tf.train.GradientDescentOptimizer(learning_rate)
     tf.summary.scalar('loss', loss)
-
     lr = tf.train.exponential_decay(learning_rate, global_step, 12500, 0.1, staircase=True)
-
     optimizer = tf.train.AdamOptimizer(lr)
-    #    optimizer = tf.train.MomentumOptimizer(lr,0.9)
     train_op = optimizer.minimize(loss, global_step=global_step)
-
     return train_op
 
 
@@ -66,14 +60,14 @@ def evaluation(logits):
 '''------------------------------以下为辅助函数-------------------------------------'''
 
 
-def conv2d(input_tensor, kernel_size, layer_name, phase, BN=False, act=tf.nn.relu):
+def conv2d(input_tensor, kernel_size, layer_name, phase, BN=False, act=tf.nn.relu, padding='VALID'):
     with tf.name_scope(layer_name):
         with tf.name_scope('weights'):
             weights = tf.Variable(tf.truncated_normal(kernel_size, stddev=1e-2))
         with tf.name_scope('biases'):
             biases = tf.Variable(tf.constant(1e-2, shape=[kernel_size[3]]))
         with tf.name_scope('preactivate'):
-            preactivate = tf.nn.conv2d(input_tensor, weights, [1, 1, 1, 1], padding='VALID') + biases
+            preactivate = tf.nn.conv2d(input_tensor, weights, [1, 1, 1, 1], padding=padding) + biases
         if BN:
             preactivate = batch_norm(preactivate, kernel_size[3], phase)
         activations = act(preactivate, name='activation')

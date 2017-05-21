@@ -25,29 +25,18 @@ def do_eval_true(sess, eval, logits, images_u, images_v, prop, phase_train, data
     count = 0
     while count < data_set.num_of_path:
         true_count = 0
-        raw_output_mat = []
-        output_txt = []
         steps_per_epoch = data_set.num_examples // test_batch
         num_example = steps_per_epoch * test_batch
         for step in xrange(steps_per_epoch):
             labels_pl = tf.placeholder(tf.float32, shape=None)
             feed_dict = fill_feed_dict(data_set,images_u,images_v,labels_pl,prop,phase_train,'test')
-            raw_output, output, label = sess.run([logits, eval, labels_pl],feed_dict=feed_dict)
-            raw_output_mat.append(raw_output)
+            output, label = sess.run([eval, labels_pl],feed_dict=feed_dict)
             for i in xrange(test_batch):
                 disp = (output[1][i]*disp_precision)-2+disp_precision/2
                 true_count += abs(disp-label[i])<0.07
-                output_txt.append(disp)
         precision = float(true_count) / num_example
         print ('example: %d, correct: %d, Precision: %0.04f' % (num_example, true_count, precision))
         count += 1
-        output_txt = np.array(output_txt)
-        output_txt = output_txt.reshape([512, 512])
-        name = data_set.get_data_name()
-        np.savetxt(main_path + '/image_disp/output/' + name + '.txt', output_txt, fmt='%.5f')
-        raw_output_mat = np.array(raw_output_mat)
-        raw_output_mat = raw_output_mat.reshape([512,512,58])
-        sio.savemat(main_path + '/image_disp/output/' + name + '.mat', {'raw_output': raw_output_mat})
 
 
 def fill_feed_dict(data_sets, images_u_pl, images_v_pl, labels_placeholder, prop_placeholder,phase_train, mode='train'):
@@ -99,7 +88,9 @@ def main():
 
         saver = tf.train.Saver(tf.global_variables())
 
-        sess = tf.Session()
+        gpu_option = tf.GPUOptions(per_process_gpu_memory_fraction=0.333)
+
+        sess = tf.Session(config=tf.ConfigProto(gpu_options=gpu_option))
 
         summary_writer = tf.summary.FileWriter(summary_path, sess.graph)
 
@@ -136,6 +127,7 @@ def main():
 
 
 if __name__ == '__main__':
+
     main()
 
     print 'done'
