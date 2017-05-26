@@ -5,6 +5,7 @@ import network
 import dataset
 import numpy as np
 import scipy.io as sio
+import time
 
 
 EPIWidth = 9
@@ -19,6 +20,7 @@ disp_precision = 0.07
 def do_eval_true(sess, eval, logits, images_u, images_v, prop, phase_train, data_set):
     count = 0
     while count < data_set.num_of_path:
+        time1 = time.time()
         true_count = 0
         raw_output_mat = []
         output_txt = []
@@ -36,6 +38,7 @@ def do_eval_true(sess, eval, logits, images_u, images_v, prop, phase_train, data
                 true_count += abs(disp-label[i])<0.07
                 output_txt.append(disp)
         precision = float(true_count) / num_example
+        print time.time()-time1
         print ('example: %d, correct: %d, Precision: %0.04f' % (num_example, true_count, precision))
         count += 1
         output_txt = np.array(output_txt)
@@ -74,7 +77,7 @@ def main():
 
         saver = tf.train.Saver(tf.global_variables())
 
-        gpu_option = tf.GPUOptions(per_process_gpu_memory_fraction=0.333)
+        gpu_option = tf.GPUOptions(per_process_gpu_memory_fraction=0.5)
 
         sess = tf.Session(config=tf.ConfigProto(gpu_options=gpu_option))
 

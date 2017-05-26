@@ -24,9 +24,10 @@ class Dataset(object):
 
         labels = io.read_disp(self._Path.disp[self._index_of_image])
         image_u, image_v = io.read_data(self._Path.data[self._index_of_image],self._EPIWidth,UV_Plus=True)
+        self._range = io.read_cfg(self._Path.data[self._index_of_image]+'/parameters.cfg')
 
         if self._type == 'train':
-            image_u, image_v, labels = io.bad_patch_filter(image_u, image_v, labels)
+#            image_u, image_v, labels = io.bad_patch_filter(image_u, image_v, labels)
             image_u, image_v, labels = shuffle(image_u, image_v, labels)
 
         image_u = io.preprocess(image_u,self._type)
@@ -87,6 +88,10 @@ class Dataset(object):
     @property
     def num_of_path(self):
         return self._num_of_path
+
+    @property
+    def range(self):
+        return self._range
 
 
 def get_datasets(dir,EPIWidth,disp_precision,type):

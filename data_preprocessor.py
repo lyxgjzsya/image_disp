@@ -3,6 +3,8 @@ import numpy as np
 import os
 from PIL import Image
 import cv2
+import collections
+
 
 def read_disp(dir):
     """
@@ -53,7 +55,7 @@ def get_path_list(root,type):
     if type == 'train':
         train_data_path = root+'/full_data/training'
     elif type == 'test':
-        train_data_path = root+'/full_data/additional'
+        train_data_path = root+'/full_data/test'
     else:
         train_data_path = root+'???'
     filelist = os.listdir(train_data_path)
@@ -100,6 +102,27 @@ def bad_patch_filter(u,v,l):
     f_v = np.array(f_v)
     f_l = np.array(f_l)
     return f_u,f_v,f_l
+
+
+def read_cfg(path):
+    min = -2
+    max = 2
+    with open(path,'r') as f:
+        for line in f.readlines():
+            line = line.strip()
+            if line.find('disp_min') != -1:
+                line = line[line.rfind('=')+1:]
+                min = float(line) + 4.0
+                min = min/0.07
+                min = int(min)
+            elif line.find('disp_max') != -1:
+                line = line[line.rfind('=')+1:]
+                max = float(line) + 4.0
+                max = max/0.07
+                max = int(max)+1
+    Range = collections.namedtuple('Range',['min','max'])
+    return Range(min,max)
+
 
 """-------------------------以下辅助函数-----------------------"""
 def sub_mean(image):
@@ -262,22 +285,26 @@ def ana(img):
 
 
 if __name__=='__main__':
+    import scipy.io as sio
 
-    root = '/home/luoyaox/Work/lightfield/'
-    img = cv2.imread(root + 'full_data/additional/table/input_Cam040.png',0)
-#    img = rgb2gray(img)
-    disp = read_disp(root + 'error_analyse/boardgames.txt')
-#    img = cv2.GaussianBlur(img,(3,3),0)
-    img = cv2.Canny(img,15,15)
-    cv2.imshow('origin',img)
-    cv2.waitKey(0)
-#    img_list = FileHelper.get_files('/home/luoyaox/Work/lightfield/error_analyse/rosemary')
-#    count = 0.0
-#    for path in img_list:
-#        img = cv2.imread(path,0)
-#        img = cv2.Canny(img,15,15)
-#        count+=ana(img)
-#    print count/img_list.__len__()
+    root = '/home/luoyaox/Work/lightfield/full_data/stratified'
+    filelist = FileHelper.get_files(root,'.txt')
+    count = np.zeros(115)
+    Sum = 0
+    for path in filelist:
+        disp = read_disp(path)
+        for d in disp:
+            label = int((d+4)/0.07)
+            count[label]+=1
+            Sum+=1
+    count /= Sum
+
+    sio.savemat('/home/luoyaox/' + 'training.mat', {'raw_output': count})
+
+
+
+
+print 1
 
 
 

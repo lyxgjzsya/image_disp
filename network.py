@@ -9,9 +9,12 @@ def inference_ds(input_u, input_v, prop, phase, EPIWidth, disp_precision):
     v_net = inference(input_v, prop, phase, EPIWidth, disp_precision, 'v-net')
     concat = tf.concat([u_net, v_net], 1)
     output = fc(concat, 1024, output_size, 'FullyConnection_2')
-    output = tf.nn.softmax(output)
-
+#    output = tf.nn.softmax(output)
     return output
+
+
+def softmax(input):
+    return tf.nn.softmax(input)
 
 
 def inference(image_pl, prop, phase, EPIWidth, disp_precision, net_name):
@@ -54,7 +57,7 @@ def training(loss, learning_rate, global_step):
 
 
 def evaluation(logits):
-    return tf.nn.top_k(logits)
+    return tf.nn.top_k(logits,3)
 
 
 '''------------------------------以下为辅助函数-------------------------------------'''
