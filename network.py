@@ -1,12 +1,15 @@
 # -*- coding: UTF-8 -*-
 import tensorflow as tf
 import math
+disp_precision = 0.07
+disp_min = -4
+disp_max = 4
+class_num = int((disp_max - disp_min) / disp_precision) + 1
 
-
-def inference_ds(input_u, input_v, prop, phase, EPIWidth, disp_precision):
-    output_size = int(4 / disp_precision) + 1
-    u_net = inference(input_u, prop, phase, EPIWidth, disp_precision, 'u-net')
-    v_net = inference(input_v, prop, phase, EPIWidth, disp_precision, 'v-net')
+def inference_ds(input_u, input_v, prop, phase, disp_precision):
+    output_size = int(math.ceil(float(disp_max-disp_min) / disp_precision))
+    u_net = inference(input_u, prop, phase, 'u-net')
+    v_net = inference(input_v, prop, phase, 'v-net')
     concat = tf.concat([u_net, v_net], 1)
     output = fc(concat, 1024, output_size, 'FullyConnection_2')
 #    output = tf.nn.softmax(output)
@@ -17,7 +20,7 @@ def softmax(input):
     return tf.nn.softmax(input)
 
 
-def inference(image_pl, prop, phase, EPIWidth, disp_precision, net_name):
+def inference(image_pl, prop, phase, net_name):
     with tf.name_scope(net_name):
         hidden1 = conv2d(image_pl, [2, 2, 1, 32], 'Convolution_1', phase, BN=True)
         hidden1_1 = conv2d(hidden1, [2, 2, 32, 64], 'Convolution_1_1', phase, BN=True)
@@ -41,7 +44,7 @@ def inference(image_pl, prop, phase, EPIWidth, disp_precision, net_name):
 
 def loss(logits, labels):
 #    Loss = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(labels=labels, logits=logits))
-    one_hot_label = tf.one_hot(labels, 58)
+    one_hot_label = tf.one_hot(labels, class_num)
 #    Loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(labels=one_hot_label, logits=logits))
     Loss = -tf.reduce_mean(one_hot_label*tf.log(logits))
 

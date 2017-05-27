@@ -5,11 +5,13 @@ import network
 import dataset
 import numpy as np
 import scipy.io as sio
+import collections
+import math
 
 EPIWidth = 9
 batch_size = 128
 test_batch = 2048
-# main_path = '/home/luoyaox/Work/lightfield'
+#main_path = '/home/luoyaox/Work/lightfield'
 main_path = '/home/cs505/workspace/luo_space'
 summary_path = main_path + '/image_disp/summary'
 checkpoint_path = main_path + '/image_disp/checkpoint'
@@ -18,14 +20,9 @@ disp_min = -4
 disp_max = 4
 class_num = int((disp_max - disp_min) / disp_precision) + 1
 
-
-def trans(x):
-    r = int((x - disp_min) / disp_precision)
-    if r < 0:
-        r = 0
-    if r > class_num:
-        r = class_num
-    return r
+'''
+attention! in this version,the label of train is class-label,while the label of test is disp-label!
+'''
 
 
 def do_eval_true(sess, eval, logits, images_u, images_v, prop, phase_train, data_set):
@@ -81,7 +78,7 @@ def fill_feed_dict(data_sets, images_u_pl, images_v_pl, labels_placeholder, prop
         feed_dict = {
             images_u_pl: images_u,
             images_v_pl: images_v,
-            labels_placeholder: map(trans, labels),
+            labels_placeholder: labels,
             prop_placeholder: 0.5,
             phase_train: True,
         }
@@ -96,14 +93,14 @@ def main():
 
         global_step = tf.Variable(0, trainable=False)
 
-        images_placeholder_v = tf.placeholder(tf.float32, shape=(None, 9, EPIWidth, 3))
-        images_placeholder_u = tf.placeholder(tf.float32, shape=(None, 9, EPIWidth, 3))
+        images_placeholder_v = tf.placeholder(tf.float32, shape=(None, 9, EPIWidth, 1))
+        images_placeholder_u = tf.placeholder(tf.float32, shape=(None, 9, EPIWidth, 1))
         labels_placeholder = tf.placeholder(tf.int32, shape=None)
         prop_placeholder = tf.placeholder('float')
         phase_train = tf.placeholder(tf.bool, name='phase_train')
 
         logits = network.inference_ds(images_placeholder_u, images_placeholder_v, prop_placeholder, phase_train,
-                                      EPIWidth, disp_precision)
+                                      disp_precision)
 
         logits_softmax = network.softmax(logits)
 
@@ -135,14 +132,14 @@ def main():
 
         start_time = time.time()
 
-        for step in xrange(50000):
+        step = 0
 
+        while not train_sets.complete:
             feed_dict = fill_feed_dict(train_sets, images_placeholder_u, images_placeholder_v, labels_placeholder,
                                        prop_placeholder, phase_train, 'train')
             _, loss_value = sess.run([train_op, loss], feed_dict=feed_dict)
 
             duration = time.time() - start_time
-
             if step % 1000 == 0:
                 print ('Step:%d: loss = %.2f (%.3f sec)' % (step, loss_value, duration))
                 summary_str = sess.run(summary, feed_dict=feed_dict)
@@ -150,30 +147,21 @@ def main():
                 summary_writer.flush()
 
             if step % 25000 == 24999:
-                saver.save(sess, checkpoint_path + '/model.ckpt', global_step=step)
                 print('test Data Eval:')
                 do_eval_true(sess, eval, logits_softmax, images_placeholder_u, images_placeholder_v, prop_placeholder,
                              phase_train, test_sets)
 
-        if False:
-            train_sets.set_index_of_image(-1)#train_sets.num_of_path)
-            train_sets.next_dataset()
-            pre = -1
-            flag = True
-            while flag:
-                if train_sets.index_of_image > pre:
-                    pre = train_sets.index_of_image
-                    print('test Data Eval:')
-                    do_eval_true(sess, eval, logits_softmax, images_placeholder_u, images_placeholder_v,
-                                 prop_placeholder, phase_train, test_sets)
+            if step % 50000 == 49999:
+                saver.save(sess, checkpoint_path + '/model.ckpt', global_step=step)
 
-                feed_dict = fill_feed_dict(train_sets, images_placeholder_u, images_placeholder_v, labels_placeholder,
-                                           prop_placeholder, phase_train, 'train')
-                _, loss_value = sess.run([train_op, loss], feed_dict=feed_dict)
 
-                if train_sets.index_of_image < pre:
-                    flag = False
-
+def trans(x):
+    r = int((x - disp_min) / disp_precision)
+    if r < 0:
+        r = 0
+    if r > class_num:
+        r = class_num
+    return r
 
 if __name__ == '__main__':
     main()

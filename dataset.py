@@ -13,22 +13,19 @@ class Dataset(object):
         self._num_examples = 0
         self._epochs_completed = 0
         self._index_in_epoch = 0
-        self._index_of_image = 0
+        self._index_of_image = -1
         self._type = type
+        self._complete = False
 
 
     def next_dataset(self):
         self._index_of_image += 1
         if self._index_of_image == self._num_of_path:
             self._index_of_image = 0
+            self._complete = True
 
         labels = io.read_disp(self._Path.disp[self._index_of_image])
-        image_u, image_v = io.read_data(self._Path.data[self._index_of_image],self._EPIWidth,UV_Plus=True)
-        self._range = io.read_cfg(self._Path.data[self._index_of_image]+'/parameters.cfg')
-
-        if self._type == 'train':
-#            image_u, image_v, labels = io.bad_patch_filter(image_u, image_v, labels)
-            image_u, image_v, labels = shuffle(image_u, image_v, labels)
+        image_u, image_v = io.read_data(self._Path.data[self._index_of_image],self._EPIWidth)
 
         image_u = io.preprocess(image_u,self._type)
         image_v = io.preprocess(image_v,self._type)
@@ -39,11 +36,11 @@ class Dataset(object):
         self._u = image_u
         self._v = image_v
 
+        if self._type == 'test':
+            print ('test data set:')
+            print (self.get_data_name())
         if self._type == 'train':
             print ('train data set:')
-            print (self.get_data_name())
-        elif self._type == 'test':
-            print ('test data set:')
             print (self.get_data_name())
 
 
@@ -90,8 +87,8 @@ class Dataset(object):
         return self._num_of_path
 
     @property
-    def range(self):
-        return self._range
+    def complete(self):
+        return self._complete
 
 
 def get_datasets(dir,EPIWidth,disp_precision,type):

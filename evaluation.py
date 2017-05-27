@@ -1,5 +1,4 @@
 # -*- coding: UTF-8 -*-
-import time
 import tensorflow as tf
 import network
 import dataset
