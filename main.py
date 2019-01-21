@@ -27,7 +27,7 @@ attention! in this version,the label of train is class-label,while the label of 
 
 def do_eval_true(sess, eval, logits, images_u, images_v, prop, phase_train, data_set):
     count = 0
-    print 1
+    print 2
     while count < data_set.num_of_path:
         true_count = 0
         start = time.time()
