@@ -1,110 +1,123 @@
 # -*- coding: UTF-8 -*-
 import tensorflow as tf
 import math
+disp_precision = 0.07
+disp_min = -4
+disp_max = 4
+class_num = int((disp_max - disp_min) / disp_precision) + 1
+
+def inference_ds(input_u, input_v, prop, phase, disp_precision):
+    output_size = int(math.ceil(float(disp_max-disp_min) / disp_precision))
+    u_net = inference(input_u, prop, phase, 'u-net')
+    v_net = inference(input_v, prop, phase, 'v-net')
+    concat = tf.concat([u_net, v_net], 1)
+    output = fc(concat, 1024, output_size, 'FullyConnection_2')
+#    output = tf.nn.softmax(output)
+    return output
 
 
-# 测试用小型网络
-def inference_old(image_pl,prop, EPIWidth, disp_precision):
-    output_size = int(4 / disp_precision) + 1
-
-#    image_placeholder = tf.reshape(image_pl, [-1, 9, EPIWidth, 3])
-    w_conv1 = tf.Variable(tf.truncated_normal([2, 5, 3, 32], stddev=1e-4))
-    conv1 = tf.nn.conv2d(image_pl, w_conv1, [1, 1, 1, 1], padding='VALID')
-    b_conv1 = tf.Variable(tf.constant(1e-4, shape=[32]))
-    a_conv1 = tf.nn.relu(tf.nn.bias_add(conv1, b_conv1))
-#    pool1 = tf.nn.max_pool(a_conv1, ksize=[1, 1, 2, 1], strides=[1, 1, 2, 1], padding='VALID')
-
-    w_conv2 = tf.Variable(tf.truncated_normal([1, 3, 32, 64], stddev=1e-4))
-#    conv2 = tf.nn.conv2d(pool1, w_conv2, [1, 1, 1, 1], padding='VALID')
-    conv2 = tf.nn.conv2d(a_conv1, w_conv2, [1, 1, 1, 1], padding='VALID')
-    b_conv2 = tf.Variable(tf.constant(1e-4, shape=[64]))
-    a_conv2 = tf.nn.relu(tf.nn.bias_add(conv2, b_conv2))
-    pool2 = tf.nn.max_pool(a_conv2, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding='VALID')
-
-    w_conv3 = tf.Variable(tf.truncated_normal([1, 3, 64, 64], stddev=1e-4))
-    conv3 = tf.nn.conv2d(a_conv2, w_conv3, [1, 1, 1, 1], padding='VALID')
-    b_conv3 = tf.Variable(tf.constant(1e-4, shape=[64]))
-    a_conv3 = tf.nn.relu(tf.nn.bias_add(conv3, b_conv3))
-    pool3 = tf.nn.max_pool(a_conv3, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding='VALID')
-
-    pool3_shape = pool3.get_shape()
-    fc1_input_size = int(pool3_shape[1] * pool3_shape[2] * pool3_shape[3])
-
-    w_fc1 = tf.Variable(tf.truncated_normal([fc1_input_size, 1024], stddev=1.0 / math.sqrt(float(fc1_input_size))))
-    b_fc1 = tf.Variable(tf.constant(1e-4, shape=[1024]))
-    pool3_tmp = tf.reshape(pool3, [-1, fc1_input_size])
-    a_fc1 = tf.nn.relu(tf.matmul(pool3_tmp, w_fc1) + b_fc1)
-    a_fc1_drop = tf.nn.dropout(a_fc1,prop)
-
-    w_fc2 = tf.Variable(tf.truncated_normal([1024, output_size], stddev=1.0 / math.sqrt(float(1024))))
-    b_fc2 = tf.Variable(tf.constant(0.0, shape=[output_size]))
-    #    a_fc2 = tf.nn.softmax(tf.matmul(a_fc1,w_fc2) + b_fc2)
-    a_fc2 = tf.matmul(a_fc1_drop, w_fc2) + b_fc2
-
-    print 'image:', image_pl.get_shape()
-    print 'a_conv1:', a_conv1.get_shape()
-    print 'pool2', pool2.get_shape()
-    print 'a_conv2', a_conv2.get_shape()
-    print 'pool3', pool3.get_shape()
-    print 'a_fc1', a_fc1.get_shape()
-    print 'a_fc2', a_fc2.get_shape()
-
-    return a_fc2
+def softmax(input):
+    return tf.nn.softmax(input)
 
 
-def inference(images, EPIWidth, disp_precision):
-    output_size = int(4 / disp_precision) + 1
-    with tf.name_scope('hidden1'):
-        weights = tf.Variable(
-            tf.truncated_normal([9 * EPIWidth * 3, 512],
-                                stddev=1.0 / math.sqrt(float(9 * EPIWidth * 3))),
-            name='weights')
-        biases = tf.Variable(tf.zeros([512]),
-                             name='biases')
-        hidden1 = tf.nn.relu(tf.matmul(images, weights) + biases)
-    # Hidden 2
-    with tf.name_scope('hidden2'):
-        weights = tf.Variable(
-            tf.truncated_normal([512, 256],
-                                stddev=1.0 / math.sqrt(float(512))),
-            name='weights')
-        biases = tf.Variable(tf.zeros([256]),
-                             name='biases')
-        hidden2 = tf.nn.relu(tf.matmul(hidden1, weights) + biases)
-    # Linear
-    with tf.name_scope('softmax_linear'):
-        weights = tf.Variable(
-            tf.truncated_normal([256, output_size],
-                                stddev=1.0 / math.sqrt(float(256))),
-            name='weights')
-        biases = tf.Variable(tf.zeros([output_size]),
-                             name='biases')
-        logits = tf.matmul(hidden2, weights) + biases
+def inference(image_pl, prop, phase, net_name):
+    with tf.name_scope(net_name):
+        hidden1 = conv2d(image_pl, [2, 2, 1, 32], 'Convolution_1', phase, BN=True)
+        hidden1_1 = conv2d(hidden1, [2, 2, 32, 64], 'Convolution_1_1', phase, BN=True)
+        hidden1_2 = conv2d(hidden1_1, [2, 2, 64, 128], 'Convolution_1_2', phase, BN=True)
+#        pool1 = pool(hidden1_2, [1, 1, 2, 1], [1, 1, 2, 1], 'Max_Pooling_1')
 
-    print 'image:', images.get_shape()
-    print 'hidden1:', hidden1.get_shape()
-    print 'hidden2:', hidden2.get_shape()
-    print 'output:', logits.get_shape()
+        hidden2 = conv2d(hidden1_2, [2, 2, 128, 256], 'Convolution_2', phase, BN=True)
+        hidden2_1 = conv2d(hidden2, [2, 2, 256, 512], 'Convolution_2_1', phase, BN=True)
+        hidden2_2 = conv2d(hidden2_1, [2, 2, 512, 1024], 'Convolution_2_2', phase, BN=True)
+#        pool2 = pool(hidden2_2, [1, 1, 2, 1], [1, 1, 2, 1], 'Max_Pooling_2')
+        pool2 = hidden2_2
+        pool2_shape = pool2.get_shape()
+        fc1_input_size = int(pool2_shape[1] * pool2_shape[2] * pool2_shape[3])
+        pool2_resize = tf.reshape(pool2, [-1, fc1_input_size])
 
-    return logits
+        hidden3 = fc(pool2_resize, fc1_input_size, 512, 'FullyConnection_1', wd=0.004)
+        hidden3_drop = tf.nn.dropout(hidden3, prop)
+
+    return hidden3_drop
 
 
 def loss(logits, labels):
-    labels = tf.to_int64(labels)
-    Loss = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(labels=labels, logits=logits))
+#    Loss = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(labels=labels, logits=logits))
+    one_hot_label = tf.one_hot(labels, class_num)
+#    Loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(labels=one_hot_label, logits=logits))
+    Loss = -tf.reduce_mean(one_hot_label*tf.log(logits))
 
     return Loss
 
 
 def training(loss, learning_rate, global_step):
-    #    optimizer = tf.train.GradientDescentOptimizer(learning_rate)
-    optimizer = tf.train.AdamOptimizer(learning_rate)
+    tf.summary.scalar('loss', loss)
+    lr = tf.train.exponential_decay(learning_rate, global_step, 12500, 0.1, staircase=True)
+    optimizer = tf.train.AdamOptimizer(lr)
     train_op = optimizer.minimize(loss, global_step=global_step)
-
     return train_op
 
 
-def evaluation(logits, labels):
-    correct = tf.nn.in_top_k(logits, labels, 1)
+def evaluation(logits):
+    return tf.nn.top_k(logits,3)
 
-    return tf.reduce_sum(tf.cast(correct, tf.int32))
+
+'''------------------------------以下为辅助函数-------------------------------------'''
+
+
+def conv2d(input_tensor, kernel_size, layer_name, phase, BN=False, act=tf.nn.relu, padding='VALID'):
+    with tf.name_scope(layer_name):
+        with tf.name_scope('weights'):
+            weights = tf.Variable(tf.truncated_normal(kernel_size, stddev=1e-2))
+        with tf.name_scope('biases'):
+            biases = tf.Variable(tf.constant(1e-2, shape=[kernel_size[3]]))
+        with tf.name_scope('preactivate'):
+            preactivate = tf.nn.conv2d(input_tensor, weights, [1, 1, 1, 1], padding=padding) + biases
+        if BN:
+            preactivate = batch_norm(preactivate, kernel_size[3], phase)
+        activations = act(preactivate, name='activation')
+        return activations
+
+
+def batch_norm(input, output_size, phase_train):
+    with tf.variable_scope('batch_normalization'):
+        beta = tf.Variable(tf.constant(0.0, shape=[output_size]),
+                           name='beta', trainable=True)
+        gamma = tf.Variable(tf.constant(1.0, shape=[output_size]),
+                            name='gamma', trainable=True)
+        batch_mean, batch_var = tf.nn.moments(input, [0, 1, 2], name='moments')
+        ema = tf.train.ExponentialMovingAverage(decay=0.5)
+
+        def mean_var_with_update():
+            ema_apply_op = ema.apply([batch_mean, batch_var])
+            with tf.control_dependencies([ema_apply_op]):
+                return tf.identity(batch_mean), tf.identity(batch_var)
+
+        mean, var = tf.cond(phase_train,
+                            mean_var_with_update,
+                            lambda: (ema.average(batch_mean), ema.average(batch_var)))
+        normed = tf.nn.batch_normalization(input, mean, var, beta, gamma, 1e-3)
+    return normed
+
+
+def pool(input_tensor, kernel_size, strides, layer_name):
+    with tf.name_scope(layer_name):
+        output = tf.nn.max_pool(input_tensor, ksize=kernel_size, strides=strides, padding='VALID')
+        return output
+
+
+def fc(input_tensor, input_size, output_size, layer_name, act=tf.nn.relu, wd=0.0):
+    with tf.name_scope(layer_name):
+        with tf.name_scope('weights'):
+            weights = tf.Variable(
+                tf.truncated_normal([input_size, output_size], stddev=1.0 / math.sqrt(float(input_size))))
+        with tf.name_scope('biases'):
+            biases = tf.Variable(tf.constant(1e-2, shape=[output_size]))
+        with tf.name_scope('preactivate'):
+            preactivate = tf.matmul(input_tensor, weights) + biases
+        activations = act(preactivate, name='activation')
+        if wd:
+            weight_decay = tf.multiply(tf.nn.l2_loss(weights), wd, name='weight_loss')
+            tf.add_to_collection('losses', weight_decay)
+        return activations
